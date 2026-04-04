@@ -35,8 +35,8 @@ public class RouteProcessor extends AbstractProcessor {
         }
 
         if (!resources.isEmpty()) {
+            generateRouter(resources);
             String openApiJson = buildOpenApiJson(resources);
-            generateRouter(resources, openApiJson);
             writeOpenApiResource(openApiJson);
         }
 
@@ -134,7 +134,7 @@ public class RouteProcessor extends AbstractProcessor {
         return params;
     }
 
-    private void generateRouter(List<ResourceClass> resources, String openApiJson) {
+    private void generateRouter(List<ResourceClass> resources) {
         String packageName = "io.teavmlambda.generated";
         String className = "GeneratedRouter";
 
@@ -159,8 +159,13 @@ public class RouteProcessor extends AbstractProcessor {
                 }
                 out.println();
 
-                // OpenAPI spec constant (embedded at compile time)
-                out.println("    private static final String OPENAPI_SPEC = " + javaStringLiteral(openApiJson) + ";");
+                // OpenAPI spec loaded at runtime from resources/
+                out.println("    private static final String OPENAPI_SPEC;");
+                out.println();
+                out.println("    static {");
+                out.println("        String spec = io.teavmlambda.core.Resources.loadText(\"/openapi.json\");");
+                out.println("        OPENAPI_SPEC = spec != null ? spec : \"{}\";");
+                out.println("    }");
                 out.println();
 
                 // Swagger UI HTML constant
@@ -461,16 +466,6 @@ public class RouteProcessor extends AbstractProcessor {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                     "Failed to generate openapi.json: " + e.getMessage());
         }
-    }
-
-    private String javaStringLiteral(String value) {
-        return "\"" + value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                + "\"";
     }
 
     private String jsonString(String value) {
