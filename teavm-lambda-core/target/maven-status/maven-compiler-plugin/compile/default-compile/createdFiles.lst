@@ -1,0 +1,11 @@
+io/teavmlambda/core/Request.class
+io/teavmlambda/core/annotation/Path.class
+io/teavmlambda/core/annotation/DELETE.class
+io/teavmlambda/core/annotation/QueryParam.class
+io/teavmlambda/core/annotation/Body.class
+io/teavmlambda/core/annotation/PUT.class
+io/teavmlambda/core/annotation/PathParam.class
+io/teavmlambda/core/annotation/GET.class
+io/teavmlambda/core/Response.class
+io/teavmlambda/core/annotation/POST.class
+io/teavmlambda/core/Router.class
