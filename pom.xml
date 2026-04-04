@@ -16,8 +16,10 @@
         <module>teavm-lambda-core</module>
         <module>teavm-lambda-processor</module>
         <module>teavm-lambda-adapter-lambda</module>
+        <module>teavm-lambda-adapter-cloudrun</module>
         <module>teavm-lambda-db</module>
         <module>teavm-lambda-demo</module>
+        <module>teavm-lambda-demo-cloudrun</module>
     </modules>
 
     <properties>
@@ -56,6 +58,11 @@
             <dependency>
                 <groupId>io.teavmlambda</groupId>
                 <artifactId>teavm-lambda-adapter-lambda</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-adapter-cloudrun</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

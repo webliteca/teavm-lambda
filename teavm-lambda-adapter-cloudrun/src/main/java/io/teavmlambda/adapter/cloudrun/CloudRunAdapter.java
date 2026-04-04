@@ -1,0 +1,131 @@
+package io.teavmlambda.adapter.cloudrun;
+
+import io.teavmlambda.core.Request;
+import io.teavmlambda.core.Response;
+import io.teavmlambda.core.Router;
+import org.teavm.jso.JSBody;
+import org.teavm.jso.JSFunctor;
+import org.teavm.jso.JSObject;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public final class CloudRunAdapter {
+
+    private static Router router;
+
+    private CloudRunAdapter() {
+    }
+
+    public static void start(Router router) {
+        CloudRunAdapter.router = router;
+        String port = getEnv("PORT");
+        if (port == null || port.isEmpty()) {
+            port = "8080";
+        }
+        startServer(CloudRunAdapter::handleRequest, Integer.parseInt(port));
+    }
+
+    @JSFunctor
+    interface RequestCallback extends JSObject {
+        void handle(JSObject req, JSObject res);
+    }
+
+    @JSBody(params = {"callback", "port"}, script = ""
+            + "var http = require('http');"
+            + "var url = require('url');"
+            + "var server = http.createServer(function(req, res) {"
+            + "  var chunks = [];"
+            + "  req.on('data', function(chunk) { chunks.push(chunk); });"
+            + "  req.on('end', function() {"
+            + "    req.__body = chunks.length > 0 ? Buffer.concat(chunks).toString() : null;"
+            + "    $rt_startThread(function() {"
+            + "      callback(req, res);"
+            + "    });"
+            + "  });"
+            + "});"
+            + "server.listen(port, '0.0.0.0', function() {"
+            + "  console.log('Cloud Run server listening on port ' + port);"
+            + "});")
+    private static native void startServer(RequestCallback callback, int port);
+
+    @JSBody(params = {"name"}, script = "return process.env[name] || '';")
+    private static native String getEnv(String name);
+
+    @JSBody(params = {"req"}, script = "return req.method || 'GET';")
+    private static native String getMethod(JSObject req);
+
+    @JSBody(params = {"req"}, script = "return require('url').parse(req.url, true).pathname || '/';")
+    private static native String getPath(JSObject req);
+
+    @JSBody(params = {"req"}, script = "return req.__body || null;")
+    private static native String getBody(JSObject req);
+
+    @JSBody(params = {"req"}, script = "return req.headers || {};")
+    private static native JSObject getHeaders(JSObject req);
+
+    @JSBody(params = {"req"}, script = ""
+            + "var parsed = require('url').parse(req.url, true);"
+            + "return parsed.query || {};")
+    private static native JSObject getQueryParams(JSObject req);
+
+    @JSBody(params = {"obj"}, script = ""
+            + "var keys = Object.keys(obj || {});"
+            + "var result = [];"
+            + "for (var i = 0; i < keys.length; i++) {"
+            + "  result.push(keys[i]);"
+            + "  result.push(String(obj[keys[i]]));"
+            + "}"
+            + "return result;")
+    private static native String[] jsObjectToEntries(JSObject obj);
+
+    @JSBody(params = {"res", "statusCode", "headersArr", "body"}, script = ""
+            + "for (var i = 0; i < headersArr.length; i += 2) {"
+            + "  res.setHeader(headersArr[i], headersArr[i + 1]);"
+            + "}"
+            + "res.writeHead(statusCode);"
+            + "res.end(body || '');")
+    private static native void sendResponse(JSObject res, int statusCode, String[] headersArr, String body);
+
+    static void handleRequest(JSObject req, JSObject res) {
+        try {
+            String httpMethod = getMethod(req);
+            String path = getPath(req);
+            String body = getBody(req);
+
+            Map<String, String> headers = entriesToMap(jsObjectToEntries(getHeaders(req)));
+            Map<String, String> queryParams = entriesToMap(jsObjectToEntries(getQueryParams(req)));
+
+            Request request = new Request(httpMethod, path, headers, queryParams, body);
+            Response response = router.route(request);
+
+            String[] headersArr = mapToEntries(response.getHeaders());
+            sendResponse(res, response.getStatusCode(), headersArr, response.getBody());
+        } catch (Exception e) {
+            sendResponse(res, 500, new String[0], "{\"error\":\"" + e.getMessage() + "\"}");
+        }
+    }
+
+    private static Map<String, String> entriesToMap(String[] entries) {
+        Map<String, String> map = new HashMap<>();
+        if (entries != null) {
+            for (int i = 0; i + 1 < entries.length; i += 2) {
+                map.put(entries[i], entries[i + 1]);
+            }
+        }
+        return map;
+    }
+
+    private static String[] mapToEntries(Map<String, String> map) {
+        if (map == null || map.isEmpty()) {
+            return new String[0];
+        }
+        String[] entries = new String[map.size() * 2];
+        int i = 0;
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            entries[i++] = entry.getKey();
+            entries[i++] = entry.getValue();
+        }
+        return entries;
+    }
+}
