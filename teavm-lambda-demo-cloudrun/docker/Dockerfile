@@ -32,6 +32,7 @@ COPY teavm-lambda-demo/docker/bootstrap.js teavm-lambda-demo/docker/
 COPY teavm-lambda-demo-cloudrun/src teavm-lambda-demo-cloudrun/src
 COPY teavm-lambda-demo-cloudrun/docker/package.json teavm-lambda-demo-cloudrun/docker/
 COPY teavm-lambda-demo-cloudrun/docker/server.js teavm-lambda-demo-cloudrun/docker/
+COPY teavm-lambda-demo-cloudrun/src/main/webapp teavm-lambda-demo-cloudrun/src/main/webapp
 
 RUN mvn clean package -pl teavm-lambda-demo-cloudrun -am -Dexec.skip=true -q
 
