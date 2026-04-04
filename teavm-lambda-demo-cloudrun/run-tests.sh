@@ -39,6 +39,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Remove stale containers from previous runs
+docker rm -f "$APP_CONTAINER" 2>/dev/null || true
+
 # --- Setup ---
 echo "=== Starting PostgreSQL ==="
 docker compose -f "$COMPOSE_FILE" up -d --wait
@@ -61,7 +64,7 @@ echo
 # Wait for app to be ready
 echo "=== Waiting for app to start ==="
 for i in $(seq 1 30); do
-    if docker exec "$APP_CONTAINER" sh -c "wget -q -O /dev/null http://localhost:$APP_PORT/health" 2>/dev/null; then
+    if docker exec "$APP_CONTAINER" node -e "require('http').get('http://localhost:$APP_PORT/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))" 2>/dev/null; then
         echo "App is ready!"
         break
     fi
@@ -87,8 +90,6 @@ run_test() {
     if [ -n "$request_body" ]; then
         curl_args+=(-H "Content-Type: application/json" -d "$request_body")
     fi
-
-    response=$(docker exec "$APP_CONTAINER" sh -c "wget -q -O - --method=$method --header='Content-Type: application/json' ${request_body:+--body-data='$request_body'} http://localhost:$APP_PORT$path; echo; echo \$?" 2>/dev/null || echo "")
 
     # Use a temp container on the same network to make HTTP calls
     local full_response

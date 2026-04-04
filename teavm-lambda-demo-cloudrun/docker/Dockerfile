@@ -33,13 +33,14 @@ COPY teavm-lambda-demo-cloudrun/src teavm-lambda-demo-cloudrun/src
 COPY teavm-lambda-demo-cloudrun/docker/package.json teavm-lambda-demo-cloudrun/docker/
 COPY teavm-lambda-demo-cloudrun/docker/server.js teavm-lambda-demo-cloudrun/docker/
 
-RUN mvn clean package -pl teavm-lambda-demo-cloudrun -am -q
+RUN mvn clean package -pl teavm-lambda-demo-cloudrun -am -Dexec.skip=true -q
 
 # Runtime stage
 FROM node:22-slim
 
 WORKDIR /app
 COPY --from=build /app/teavm-lambda-demo-cloudrun/target/cloudrun/ .
+RUN npm install --production
 
 EXPOSE 8080
 CMD ["node", "server.js"]
