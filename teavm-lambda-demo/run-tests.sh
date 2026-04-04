@@ -45,20 +45,34 @@ if [ -z "$NETWORK" ]; then
     exit 1
 fi
 echo "Using Docker network: $NETWORK"
+
+# Smoke test: run one invocation with stderr visible for diagnostics
+echo
+echo "=== Smoke test (showing SAM output for diagnostics) ==="
+SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
+    --template "$TEMPLATE" \
+    --event "$EVENTS_DIR/get-health.json" \
+    --docker-network "$NETWORK" 2>&1 || true
+echo
+echo "=== Smoke test complete ==="
 echo
 
 invoke() {
     local event_file="$1"
-    local output
-    # sam local invoke exits non-zero after the Lambda container stops - that's normal.
-    # Capture both stdout and stderr, then extract the JSON response.
-    output=$(SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
+    local stdout_file
+    stdout_file=$(mktemp)
+    # SAM outputs the Lambda response JSON on stdout, logs on stderr.
+    # Capture them separately. SAM exits non-zero after invocation - that's normal.
+    SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
         --template "$TEMPLATE" \
         --event "$event_file" \
         --docker-network "$NETWORK" \
-        2>&1) || true
-    # Extract the last JSON object line from the output
-    echo "$output" | grep '^{' | tail -1 || echo ""
+        > "$stdout_file" 2>/dev/null || true
+    # The response JSON is the last line of stdout that looks like JSON
+    local result
+    result=$(grep '^{' "$stdout_file" | tail -1 || echo "")
+    rm -f "$stdout_file"
+    echo "$result"
 }
 
 assert_status() {
