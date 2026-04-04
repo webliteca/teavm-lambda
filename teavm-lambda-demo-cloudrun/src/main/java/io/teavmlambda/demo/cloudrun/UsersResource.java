@@ -10,6 +10,8 @@ import org.teavm.jso.JSObject;
 import org.teavm.jso.core.JSArray;
 
 @Path("/users")
+@ApiTag(value = "Users", description = "User management operations")
+@ApiInfo(title = "TeaVM Lambda Cloud Run Demo API", version = "0.1.0", description = "Demo REST API built with TeaVM Lambda for Cloud Run")
 public class UsersResource {
 
     private final Db db;
@@ -19,6 +21,8 @@ public class UsersResource {
     }
 
     @GET
+    @ApiOperation(summary = "List all users", description = "Returns a list of all users in the system")
+    @ApiResponse(code = 200, description = "List of users")
     public Response listUsers() {
         PgResult result = db.query("SELECT id, name, email FROM users ORDER BY id");
         JSArray<JSObject> rows = result.getRows();
@@ -34,6 +38,9 @@ public class UsersResource {
 
     @GET
     @Path("/{id}")
+    @ApiOperation(summary = "Get user by ID", description = "Returns a single user by their ID")
+    @ApiResponse(code = 200, description = "User found")
+    @ApiResponse(code = 404, description = "User not found")
     public Response getUser(@PathParam("id") String id) {
         PgResult result = db.query("SELECT id, name, email FROM users WHERE id = $1", id);
         if (result.getRowCount() == 0) {
@@ -46,6 +53,8 @@ public class UsersResource {
     }
 
     @POST
+    @ApiOperation(summary = "Create a new user", description = "Creates a user with the given name and email")
+    @ApiResponse(code = 201, description = "User created")
     public Response createUser(@Body String body) {
         JSObject parsed = JsUtil.parseJson(body);
         String name = JsUtil.getStringProperty(parsed, "name");
@@ -60,6 +69,9 @@ public class UsersResource {
 
     @DELETE
     @Path("/{id}")
+    @ApiOperation(summary = "Delete a user", description = "Deletes a user by their ID")
+    @ApiResponse(code = 204, description = "User deleted")
+    @ApiResponse(code = 404, description = "User not found")
     public Response deleteUser(@PathParam("id") String id) {
         PgResult result = db.query("DELETE FROM users WHERE id = $1 RETURNING id", id);
         if (result.getRowCount() == 0) {
