@@ -18,8 +18,12 @@
         <module>teavm-lambda-adapter-lambda</module>
         <module>teavm-lambda-adapter-cloudrun</module>
         <module>teavm-lambda-db</module>
+        <module>teavm-lambda-nosqldb</module>
+        <module>teavm-lambda-dynamodb</module>
+        <module>teavm-lambda-firestore</module>
         <module>teavm-lambda-demo</module>
         <module>teavm-lambda-demo-cloudrun</module>
+        <module>teavm-lambda-demo-nosqldb</module>
     </modules>
 
     <properties>
@@ -68,6 +72,21 @@
             <dependency>
                 <groupId>io.teavmlambda</groupId>
                 <artifactId>teavm-lambda-db</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-nosqldb</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-dynamodb</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-firestore</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

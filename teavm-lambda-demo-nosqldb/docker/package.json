@@ -1,0 +1,10 @@
+{
+  "name": "teavm-lambda-demo-nosqldb",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "@google-cloud/firestore": "^7.6.0"
+  }
+}
