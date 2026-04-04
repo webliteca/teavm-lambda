@@ -24,10 +24,10 @@ jobs:
           server-id: github
 
       - name: Build
-        run: mvn -B clean install -DskipTests
+        run: mvn -B clean package -DskipTests
 
       - name: Deploy snapshots to GitHub Packages
         if: github.event_name == 'push'
-        run: mvn -B org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
+        run: mvn -B package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
