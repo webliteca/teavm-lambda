@@ -35,8 +35,9 @@ public class RouteProcessor extends AbstractProcessor {
         }
 
         if (!resources.isEmpty()) {
-            generateRouter(resources);
-            generateOpenApiSpec(resources);
+            String openApiJson = buildOpenApiJson(resources);
+            generateRouter(resources, openApiJson);
+            writeOpenApiResource(openApiJson);
         }
 
         return true;
@@ -133,7 +134,7 @@ public class RouteProcessor extends AbstractProcessor {
         return params;
     }
 
-    private void generateRouter(List<ResourceClass> resources) {
+    private void generateRouter(List<ResourceClass> resources, String openApiJson) {
         String packageName = "io.teavmlambda.generated";
         String className = "GeneratedRouter";
 
@@ -158,24 +159,8 @@ public class RouteProcessor extends AbstractProcessor {
                 }
                 out.println();
 
-                // OpenAPI spec constant
-                out.println("    private static final String OPENAPI_SPEC;");
-                out.println();
-                out.println("    static {");
-                out.println("        try {");
-                out.println("            java.io.InputStream is = GeneratedRouter.class.getResourceAsStream(\"/openapi.json\");");
-                out.println("            if (is != null) {");
-                out.println("                byte[] bytes = new byte[is.available()];");
-                out.println("                is.read(bytes);");
-                out.println("                is.close();");
-                out.println("                OPENAPI_SPEC = new String(bytes);");
-                out.println("            } else {");
-                out.println("                OPENAPI_SPEC = \"{}\";");
-                out.println("            }");
-                out.println("        } catch (Exception e) {");
-                out.println("            throw new RuntimeException(e);");
-                out.println("        }");
-                out.println("    }");
+                // OpenAPI spec constant (embedded at compile time)
+                out.println("    private static final String OPENAPI_SPEC = " + javaStringLiteral(openApiJson) + ";");
                 out.println();
 
                 // Swagger UI HTML constant
@@ -308,7 +293,7 @@ public class RouteProcessor extends AbstractProcessor {
         out.println("        }");
     }
 
-    private void generateOpenApiSpec(List<ResourceClass> resources) {
+    private String buildOpenApiJson(List<ResourceClass> resources) {
         // Find @ApiInfo if any resource has it
         String title = "API";
         String version = "1.0.0";
@@ -462,16 +447,30 @@ public class RouteProcessor extends AbstractProcessor {
         json.append("  }\n");
         json.append("}\n");
 
+        return json.toString();
+    }
+
+    private void writeOpenApiResource(String openApiJson) {
         try {
             FileObject resource = processingEnv.getFiler().createResource(
                     StandardLocation.CLASS_OUTPUT, "", "openapi.json");
             try (PrintWriter out = new PrintWriter(resource.openWriter())) {
-                out.print(json);
+                out.print(openApiJson);
             }
         } catch (IOException e) {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                     "Failed to generate openapi.json: " + e.getMessage());
         }
+    }
+
+    private String javaStringLiteral(String value) {
+        return "\"" + value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                + "\"";
     }
 
     private String jsonString(String value) {
