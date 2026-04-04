@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TeaVM Lambda Demo - Users REST API
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  DemoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: teavm-lambda-demo/target/lambda/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          # For sam local: use Docker bridge gateway IP (172.17.0.1) to reach host PostgreSQL.
+          # For docker-compose PostgreSQL: use the service name (postgres).
+          # For AWS deployment: override with the actual RDS/Aurora endpoint.
+          DATABASE_URL: postgresql://demo:demo@172.17.0.1:5432/demo
+      Events:
+        RootRequest:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        ProxyRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY

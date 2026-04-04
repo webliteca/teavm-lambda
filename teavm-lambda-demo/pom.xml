@@ -61,9 +61,72 @@
                             <mainClass>io.teavmlambda.demo.Main</mainClass>
                             <targetType>JAVASCRIPT</targetType>
                             <targetDirectory>${project.build.directory}/lambda</targetDirectory>
-                            <targetFileName>index.js</targetFileName>
+                            <targetFileName>teavm-app.js</targetFileName>
                             <minifying>false</minifying>
                             <optimizationLevel>SIMPLE</optimizationLevel>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Copy package.json into lambda output and run npm install -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-package-json</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lambda</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/docker</directory>
+                                    <includes>
+                                        <include>package.json</include>
+                                        <include>bootstrap.js</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>rename-bootstrap</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>mv</executable>
+                            <workingDirectory>${project.build.directory}/lambda</workingDirectory>
+                            <arguments>
+                                <argument>bootstrap.js</argument>
+                                <argument>index.js</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-install</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>npm</executable>
+                            <workingDirectory>${project.build.directory}/lambda</workingDirectory>
+                            <arguments>
+                                <argument>install</argument>
+                                <argument>--production</argument>
+                            </arguments>
                         </configuration>
                     </execution>
                 </executions>
