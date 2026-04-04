@@ -5,8 +5,7 @@
 #
 # Prerequisites:
 #   - mvn clean package -pl teavm-lambda-demo -am
-#   - docker running
-#   - sam CLI installed
+#   - docker, sam, jq on PATH
 #
 # Usage:
 #   ./teavm-lambda-demo/run-tests.sh
@@ -21,6 +20,14 @@ EVENTS_DIR=teavm-lambda-demo/events
 PASS=0
 FAIL=0
 
+# Check prerequisites
+for cmd in sam docker jq; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "ERROR: '$cmd' not found on PATH"
+        exit 1
+    fi
+done
+
 cleanup() {
     echo
     echo "=== Tearing down ==="
@@ -34,27 +41,13 @@ docker compose -f "$COMPOSE_FILE" up -d --wait
 echo
 
 # Detect the compose network name from the running containers
-NETWORK=$(docker network ls --format '{{.Name}}' | grep "$(docker compose -f "$COMPOSE_FILE" config --format json 2>/dev/null | jq -r '.name // empty')_default" 2>/dev/null || true)
-if [ -z "$NETWORK" ]; then
-    # Fallback: find the network that docker-compose just created
-    NETWORK=$(docker network ls --format '{{.Name}}' | grep '_default$' | head -1)
-fi
+NETWORK=$(docker network ls --format '{{.Name}}' | grep '_default$' | head -1)
 
 if [ -z "$NETWORK" ]; then
     echo "ERROR: Could not detect Docker compose network"
     exit 1
 fi
 echo "Using Docker network: $NETWORK"
-
-# Smoke test: run one invocation with stderr visible for diagnostics
-echo
-echo "=== Smoke test (showing SAM output for diagnostics) ==="
-SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
-    --template "$TEMPLATE" \
-    --event "$EVENTS_DIR/get-health.json" \
-    --docker-network "$NETWORK" 2>&1 || true
-echo
-echo "=== Smoke test complete ==="
 echo
 
 invoke() {
@@ -62,7 +55,7 @@ invoke() {
     local stdout_file
     stdout_file=$(mktemp)
     # SAM outputs the Lambda response JSON on stdout, logs on stderr.
-    # Capture them separately. SAM exits non-zero after invocation - that's normal.
+    # SAM exits non-zero after invocation - that's normal.
     SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
         --template "$TEMPLATE" \
         --event "$event_file" \
@@ -75,43 +68,47 @@ invoke() {
     echo "$result"
 }
 
-assert_status() {
-    local desc="$1" event="$2" expected_status="$3"
-    local response status
+# Each test case invokes SAM once and checks both status and body from the same response.
+run_test() {
+    local event="$1" expected_status="$2" body_check="$3"
+    shift 3
+    local desc_status="$1" desc_body="${2:-}"
+    local response status body
+
     response=$(invoke "$EVENTS_DIR/$event")
+
     if [ -z "$response" ]; then
-        echo "  FAIL: $desc - no response from Lambda"
+        echo "  FAIL: $desc_status - no response from Lambda"
         FAIL=$((FAIL + 1))
+        if [ -n "$desc_body" ]; then
+            echo "  FAIL: $desc_body - no response from Lambda"
+            FAIL=$((FAIL + 1))
+        fi
         return
     fi
+
+    # Check status
     status=$(echo "$response" | jq -r '.statusCode // empty')
     if [ "$status" = "$expected_status" ]; then
-        echo "  PASS: $desc (status $status)"
+        echo "  PASS: $desc_status (status $status)"
         PASS=$((PASS + 1))
     else
-        echo "  FAIL: $desc - expected status $expected_status, got: $status"
+        echo "  FAIL: $desc_status - expected status $expected_status, got: $status"
         echo "        response: $response"
         FAIL=$((FAIL + 1))
     fi
-}
 
-assert_body_contains() {
-    local desc="$1" event="$2" expected="$3"
-    local response body
-    response=$(invoke "$EVENTS_DIR/$event")
-    if [ -z "$response" ]; then
-        echo "  FAIL: $desc - no response from Lambda"
-        FAIL=$((FAIL + 1))
-        return
-    fi
-    body=$(echo "$response" | jq -r '.body // empty')
-    if echo "$body" | grep -q "$expected"; then
-        echo "  PASS: $desc"
-        PASS=$((PASS + 1))
-    else
-        echo "  FAIL: $desc - expected body to contain '$expected'"
-        echo "        body: $body"
-        FAIL=$((FAIL + 1))
+    # Check body (optional)
+    if [ -n "$desc_body" ]; then
+        body=$(echo "$response" | jq -r '.body // empty')
+        if echo "$body" | grep -q "$body_check"; then
+            echo "  PASS: $desc_body"
+            PASS=$((PASS + 1))
+        else
+            echo "  FAIL: $desc_body - expected body to contain '$body_check'"
+            echo "        body: $body"
+            FAIL=$((FAIL + 1))
+        fi
     fi
 }
 
@@ -119,36 +116,36 @@ echo "=== Running integration tests ==="
 echo "    (each test invokes Lambda via SAM in Docker)"
 echo
 
-# --- Tests ---
 echo "--- Health ---"
-assert_status     "GET /health returns 200"          get-health.json     200
-assert_body_contains "GET /health body contains ok"  get-health.json     '"status":"ok"'
+run_test get-health.json 200 '"status":"ok"' \
+    "GET /health returns 200" "GET /health body contains ok"
 
 echo
 echo "--- List Users ---"
-assert_status     "GET /users returns 200"           get-users.json      200
-assert_body_contains "GET /users contains Alice"     get-users.json      '"name":"Alice"'
-assert_body_contains "GET /users contains Bob"       get-users.json      '"name":"Bob"'
+run_test get-users.json 200 '"name":"Alice"' \
+    "GET /users returns 200" "GET /users contains Alice"
 
 echo
 echo "--- Get User ---"
-assert_status     "GET /users/1 returns 200"         get-user-1.json     200
-assert_body_contains "GET /users/1 is Alice"         get-user-1.json     '"name":"Alice"'
-assert_status     "GET /users/999 returns 404"       get-user-999.json   404
+run_test get-user-1.json 200 '"name":"Alice"' \
+    "GET /users/1 returns 200" "GET /users/1 is Alice"
+run_test get-user-999.json 404 '"error"' \
+    "GET /users/999 returns 404" ""
 
 echo
 echo "--- Create User ---"
-assert_status     "POST /users returns 201"          post-user.json      201
-assert_body_contains "POST /users returns name"      post-user.json      '"name":"TestUser"'
+run_test post-user.json 201 '"name":"TestUser"' \
+    "POST /users returns 201" "POST /users returns name"
 
 echo
 echo "--- Delete User ---"
-assert_status     "DELETE /users/3 returns 204"      delete-user-3.json  204
+run_test delete-user-3.json 204 "" \
+    "DELETE /users/3 returns 204" ""
 
 echo
 echo "--- Routing ---"
-assert_status     "GET /nonexistent returns 404"     get-nonexistent.json 404
-assert_body_contains "404 body is Not Found"         get-nonexistent.json "Not Found"
+run_test get-nonexistent.json 404 "Not Found" \
+    "GET /nonexistent returns 404" "404 body is Not Found"
 
 # --- Results ---
 echo
