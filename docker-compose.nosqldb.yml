@@ -19,7 +19,7 @@ services:
     image: amazon/dynamodb-local:latest
     command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/shell/ || exit 1"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000/ || exit 1"]
       interval: 2s
       timeout: 5s
       retries: 10
