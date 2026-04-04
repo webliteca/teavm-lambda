@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.teavmlambda</groupId>
+        <artifactId>teavm-lambda-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>teavm-lambda-demo</artifactId>
+    <name>TeaVM Lambda Demo</name>
+    <description>Demo application showing teavm-lambda in action</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.teavmlambda</groupId>
+            <artifactId>teavm-lambda-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.teavmlambda</groupId>
+            <artifactId>teavm-lambda-adapter-lambda</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.teavmlambda</groupId>
+            <artifactId>teavm-lambda-db</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.teavmlambda</groupId>
+            <artifactId>teavm-lambda-processor</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-classlib</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-jso</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.teavm</groupId>
+            <artifactId>teavm-jso-apis</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-maven-plugin</artifactId>
+                <version>${teavm.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>io.teavmlambda.demo.Main</mainClass>
+                            <targetType>JAVASCRIPT</targetType>
+                            <targetDirectory>${project.build.directory}/lambda</targetDirectory>
+                            <targetFileName>index.js</targetFileName>
+                            <minifying>false</minifying>
+                            <optimizationLevel>SIMPLE</optimizationLevel>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

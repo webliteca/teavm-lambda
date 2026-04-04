@@ -17,6 +17,7 @@
         <module>teavm-lambda-processor</module>
         <module>teavm-lambda-adapter-lambda</module>
         <module>teavm-lambda-db</module>
+        <module>teavm-lambda-demo</module>
     </modules>
 
     <properties>

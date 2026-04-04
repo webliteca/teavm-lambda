@@ -19,24 +19,37 @@ public final class LambdaAdapter {
 
     public static void start(Router router) {
         LambdaAdapter.router = router;
-        registerHandler(LambdaAdapter::handleRequest);
+        exportHandler(LambdaAdapter::handleRequest);
     }
 
     @JSFunctor
-    interface HandlerFunction extends JSObject {
-        JSObject handle(JSObject event);
+    interface RequestHandler extends JSObject {
+        void handle(JSObject event, ResultCallback resolve, ResultCallback reject);
     }
 
-    @JSBody(params = {"fn"}, script = ""
+    @JSFunctor
+    interface ResultCallback extends JSObject {
+        void call(JSObject result);
+    }
+
+    @JSBody(params = {"javaHandler"}, script = ""
+            + "function teavmHandler(event, context) {"
+            + "  return new Promise(function(resolve, reject) {"
+            + "    $rt_startThread(function() {"
+            + "      javaHandler(event,"
+            + "        function(result) { resolve(result); },"
+            + "        function(err) { reject(err); }"
+            + "      );"
+            + "    });"
+            + "  });"
+            + "}"
             + "if (typeof module !== 'undefined') {"
-            + "  module.exports.handler = function(event, context) {"
-            + "    return Promise.resolve(fn(event));"
-            + "  };"
+            + "  module.exports.handler = teavmHandler;"
             + "}"
             + "if (typeof globalThis !== 'undefined') {"
-            + "  globalThis.__teavmLambdaHandler = fn;"
+            + "  globalThis.__teavmLambdaHandler = teavmHandler;"
             + "}")
-    private static native void registerHandler(HandlerFunction fn);
+    private static native void exportHandler(RequestHandler javaHandler);
 
     @JSBody(params = {"event"}, script =
             "return event.httpMethod || (event.requestContext && event.requestContext.http && event.requestContext.http.method) || 'GET';")
@@ -72,19 +85,27 @@ public final class LambdaAdapter {
             + "return { statusCode: statusCode, headers: headers, body: body || '' };")
     private static native JSObject createApiGatewayResponse(int statusCode, String body, String[] headersArr);
 
-    static JSObject handleRequest(JSObject event) {
-        String httpMethod = getEventMethod(event);
-        String path = getEventPath(event);
-        String body = getEventBody(event);
+    @JSBody(params = {"message"}, script = "return { message: String(message) };")
+    private static native JSObject createErrorObject(String message);
 
-        Map<String, String> headers = entriesToMap(jsObjectToEntries(getEventHeaders(event)));
-        Map<String, String> queryParams = entriesToMap(jsObjectToEntries(getEventQueryParams(event)));
+    static void handleRequest(JSObject event, ResultCallback resolve, ResultCallback reject) {
+        try {
+            String httpMethod = getEventMethod(event);
+            String path = getEventPath(event);
+            String body = getEventBody(event);
 
-        Request request = new Request(httpMethod, path, headers, queryParams, body);
-        Response response = router.route(request);
+            Map<String, String> headers = entriesToMap(jsObjectToEntries(getEventHeaders(event)));
+            Map<String, String> queryParams = entriesToMap(jsObjectToEntries(getEventQueryParams(event)));
 
-        String[] headersArr = mapToEntries(response.getHeaders());
-        return createApiGatewayResponse(response.getStatusCode(), response.getBody(), headersArr);
+            Request request = new Request(httpMethod, path, headers, queryParams, body);
+            Response response = router.route(request);
+
+            String[] headersArr = mapToEntries(response.getHeaders());
+            JSObject result = createApiGatewayResponse(response.getStatusCode(), response.getBody(), headersArr);
+            resolve.call(result);
+        } catch (Exception e) {
+            reject.call(createErrorObject(e.getMessage()));
+        }
     }
 
     private static Map<String, String> entriesToMap(String[] entries) {
