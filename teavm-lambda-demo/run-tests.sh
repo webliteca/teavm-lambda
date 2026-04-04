@@ -14,9 +14,13 @@ set -eo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Use a fixed project name so the network name is deterministic and won't
+# collide with other compose projects on the same machine.
+export COMPOSE_PROJECT_NAME=teavmlambda-test
 COMPOSE_FILE=docker-compose.test.yml
 TEMPLATE=template.test.yaml
 EVENTS_DIR=teavm-lambda-demo/events
+NETWORK="${COMPOSE_PROJECT_NAME}_default"
 PASS=0
 FAIL=0
 
@@ -39,14 +43,6 @@ trap cleanup EXIT
 echo "=== Starting PostgreSQL ==="
 docker compose -f "$COMPOSE_FILE" up -d --wait
 echo
-
-# Detect the compose network name from the running containers
-NETWORK=$(docker network ls --format '{{.Name}}' | grep '_default$' | head -1)
-
-if [ -z "$NETWORK" ]; then
-    echo "ERROR: Could not detect Docker compose network"
-    exit 1
-fi
 echo "Using Docker network: $NETWORK"
 echo
 
