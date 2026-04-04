@@ -3,6 +3,7 @@ package io.teavmlambda.adapter.cloudrun;
 import io.teavmlambda.core.Request;
 import io.teavmlambda.core.Response;
 import io.teavmlambda.core.Router;
+import io.teavmlambda.core.js.NodeResourceLoader;
 import io.teavmlambda.logging.Logger;
 import io.teavmlambda.sentry.Sentry;
 import org.teavm.jso.JSBody;
@@ -22,6 +23,7 @@ public final class CloudRunAdapter {
 
     public static void start(Router router) {
         CloudRunAdapter.router = router;
+        NodeResourceLoader.install();
         initMonitoring();
         String port = getEnv("PORT");
         if (port == null || port.isEmpty()) {

@@ -10,9 +10,14 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>teavm-lambda-core</artifactId>
-    <name>TeaVM Lambda Core</name>
-    <description>Core annotations, Request/Response types, and Router interface</description>
+    <artifactId>teavm-lambda-db-jvm</artifactId>
+    <name>TeaVM Lambda DB JVM</name>
+    <description>JDBC-based database implementation for JVM deployment</description>
 
-    <!-- No platform-specific dependencies. Core is pure Java. -->
+    <dependencies>
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-db-api</artifactId>
+        </dependency>
+    </dependencies>
 </project>

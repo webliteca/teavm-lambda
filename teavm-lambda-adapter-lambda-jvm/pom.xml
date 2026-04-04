@@ -10,9 +10,9 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>teavm-lambda-db</artifactId>
-    <name>TeaVM Lambda DB</name>
-    <description>Database connectivity via JS interop for Node.js database drivers</description>
+    <artifactId>teavm-lambda-adapter-lambda-jvm</artifactId>
+    <name>TeaVM Lambda Adapter - AWS Lambda JVM</name>
+    <description>AWS Lambda adapter for JVM deployment using the AWS Lambda Java Runtime</description>
 
     <dependencies>
         <dependency>
@@ -20,20 +20,14 @@
             <artifactId>teavm-lambda-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>ca.weblite</groupId>
-            <artifactId>teavm-lambda-db-api</artifactId>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-core</artifactId>
+            <version>1.2.3</version>
         </dependency>
         <dependency>
-            <groupId>org.teavm</groupId>
-            <artifactId>teavm-jso</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.teavm</groupId>
-            <artifactId>teavm-jso-apis</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.teavm</groupId>
-            <artifactId>teavm-classlib</artifactId>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-lambda-java-events</artifactId>
+            <version>3.14.0</version>
         </dependency>
     </dependencies>
 </project>

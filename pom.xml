@@ -38,10 +38,15 @@
 
     <modules>
         <module>teavm-lambda-core</module>
+        <module>teavm-lambda-core-js</module>
         <module>teavm-lambda-processor</module>
         <module>teavm-lambda-adapter-lambda</module>
+        <module>teavm-lambda-adapter-lambda-jvm</module>
         <module>teavm-lambda-adapter-cloudrun</module>
+        <module>teavm-lambda-adapter-cloudrun-jvm</module>
+        <module>teavm-lambda-db-api</module>
         <module>teavm-lambda-db</module>
+        <module>teavm-lambda-db-jvm</module>
         <module>teavm-lambda-nosqldb</module>
         <module>teavm-lambda-dynamodb</module>
         <module>teavm-lambda-firestore</module>
@@ -82,6 +87,11 @@
             </dependency>
             <dependency>
                 <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-core-js</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-processor</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -92,12 +102,32 @@
             </dependency>
             <dependency>
                 <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-adapter-lambda-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-adapter-cloudrun</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-adapter-cloudrun-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-db-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-db</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-db-jvm</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
