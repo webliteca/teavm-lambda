@@ -23,6 +23,16 @@ docker compose up -d
 sam local start-api --template template.yaml
 ```
 
+## Cloud Run Demo (with static files)
+
+```bash
+cd teavm-lambda-demo-cloudrun
+docker compose up
+# Open http://localhost:8081
+```
+
+This starts PostgreSQL + the app. The demo serves a static web UI from `src/main/webapp/` alongside the REST API.
+
 ## Test
 
 There are no unit tests. Testing is done via integration test scripts that use Docker Compose + SAM CLI.
@@ -54,7 +64,7 @@ Multi-module Maven project:
 | `teavm-lambda-adapter-cloudrun` | Google Cloud Run HTTP server adapter |
 | `teavm-lambda-db` | Database layer wrapping Node.js pg driver via JSO |
 | `teavm-lambda-demo` | Demo REST API for AWS Lambda |
-| `teavm-lambda-demo-cloudrun` | Demo REST API for Cloud Run |
+| `teavm-lambda-demo-cloudrun` | Demo REST API + static web UI for Cloud Run |
 
 ## Key Dependencies
 
@@ -68,6 +78,7 @@ Multi-module Maven project:
 - **Async DB:** `Db` class wraps Node.js pg.Pool with `@Async`/JSPromise for blocking-style Java code over async JS
 - **Request/Response:** Immutable POJOs. Response uses fluent builder pattern (`Response.ok()`, `.status()`, `.header()`, `.body()`)
 - **Environment variables:** `DATABASE_URL` (PostgreSQL connection string), `PORT` (Cloud Run, default 8080)
+- **Static file serving (Cloud Run):** The `CloudRunAdapter` serves static files from a `./public` directory alongside API routes. Files in `src/main/webapp/` are copied to `target/cloudrun/public/` at build time (via `maven-resources-plugin`). Static files are checked first on GET requests; if no file matches, the request falls through to the Java router. Supports `index.html` directory defaults, MIME type detection, and path traversal protection.
 
 ## Code Conventions
 
