@@ -7,7 +7,9 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
+import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
@@ -34,6 +36,7 @@ public class RouteProcessor extends AbstractProcessor {
 
         if (!resources.isEmpty()) {
             generateRouter(resources);
+            generateOpenApiSpec(resources);
         }
 
         return true;
@@ -44,6 +47,12 @@ public class RouteProcessor extends AbstractProcessor {
         String basePath = normalizePath(pathAnnotation.value());
         String qualifiedName = typeElement.getQualifiedName().toString();
         String simpleName = typeElement.getSimpleName().toString();
+
+        ApiTag apiTag = typeElement.getAnnotation(ApiTag.class);
+        String tagName = apiTag != null ? apiTag.value() : simpleName;
+        String tagDescription = apiTag != null ? apiTag.description() : "";
+
+        ApiInfo apiInfo = typeElement.getAnnotation(ApiInfo.class);
 
         List<RouteMethod> methods = new ArrayList<>();
         for (Element enclosed : typeElement.getEnclosedElements()) {
@@ -63,14 +72,26 @@ public class RouteProcessor extends AbstractProcessor {
             }
 
             List<MethodParam> params = extractParams(method);
-            methods.add(new RouteMethod(httpMethod, fullPath, method.getSimpleName().toString(), params));
+
+            ApiOperation apiOp = method.getAnnotation(ApiOperation.class);
+            String summary = apiOp != null ? apiOp.summary() : "";
+            String description = apiOp != null ? apiOp.description() : "";
+
+            List<ApiResponseInfo> responseInfos = new ArrayList<>();
+            ApiResponse[] responses = method.getAnnotationsByType(ApiResponse.class);
+            for (ApiResponse r : responses) {
+                responseInfos.add(new ApiResponseInfo(r.code(), r.description(), r.mediaType()));
+            }
+
+            methods.add(new RouteMethod(httpMethod, fullPath, method.getSimpleName().toString(),
+                    params, summary, description, responseInfos));
         }
 
         if (methods.isEmpty()) {
             return null;
         }
 
-        return new ResourceClass(qualifiedName, simpleName, methods);
+        return new ResourceClass(qualifiedName, simpleName, methods, tagName, tagDescription, apiInfo);
     }
 
     private String extractHttpMethod(ExecutableElement method) {
@@ -137,6 +158,38 @@ public class RouteProcessor extends AbstractProcessor {
                 }
                 out.println();
 
+                // OpenAPI spec constant
+                out.println("    private static final String OPENAPI_SPEC;");
+                out.println();
+                out.println("    static {");
+                out.println("        try {");
+                out.println("            java.io.InputStream is = GeneratedRouter.class.getResourceAsStream(\"/openapi.json\");");
+                out.println("            if (is != null) {");
+                out.println("                byte[] bytes = new byte[is.available()];");
+                out.println("                is.read(bytes);");
+                out.println("                is.close();");
+                out.println("                OPENAPI_SPEC = new String(bytes);");
+                out.println("            } else {");
+                out.println("                OPENAPI_SPEC = \"{}\";");
+                out.println("            }");
+                out.println("        } catch (Exception e) {");
+                out.println("            throw new RuntimeException(e);");
+                out.println("        }");
+                out.println("    }");
+                out.println();
+
+                // Swagger UI HTML constant
+                out.println("    private static final String SWAGGER_UI_HTML = \"<!DOCTYPE html>\"");
+                out.println("        + \"<html lang=\\\"en\\\"><head><meta charset=\\\"UTF-8\\\">\"");
+                out.println("        + \"<title>API Documentation</title>\"");
+                out.println("        + \"<link rel=\\\"stylesheet\\\" href=\\\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\\\">\"");
+                out.println("        + \"</head><body>\"");
+                out.println("        + \"<div id=\\\"swagger-ui\\\"></div>\"");
+                out.println("        + \"<script src=\\\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\\\"></script>\"");
+                out.println("        + \"<script>SwaggerUIBundle({url:'/openapi.json',dom_id:'#swagger-ui'})</script>\"");
+                out.println("        + \"</body></html>\";");
+                out.println();
+
                 // Constructor taking resource instances
                 out.print("    public GeneratedRouter(");
                 for (int i = 0; i < resources.size(); i++) {
@@ -161,6 +214,21 @@ public class RouteProcessor extends AbstractProcessor {
                 out.println("        if (path.endsWith(\"/\") && path.length() > 1) {");
                 out.println("            path = path.substring(0, path.length() - 1);");
                 out.println("        }");
+                out.println();
+
+                // Built-in OpenAPI routes
+                out.println("        // Built-in OpenAPI routes");
+                out.println("        if (\"GET\".equals(method) && \"/openapi.json\".equals(path)) {");
+                out.println("            return Response.ok(OPENAPI_SPEC)");
+                out.println("                .header(\"Content-Type\", \"application/json\")");
+                out.println("                .header(\"Access-Control-Allow-Origin\", \"*\");");
+                out.println("        }");
+                out.println("        if (\"GET\".equals(method) && \"/swagger-ui\".equals(path)) {");
+                out.println("            return Response.ok(SWAGGER_UI_HTML)");
+                out.println("                .header(\"Content-Type\", \"text/html\");");
+                out.println("        }");
+                out.println();
+
                 out.println("        String[] segments = path.split(\"/\", -1);");
                 out.println();
 
@@ -240,6 +308,183 @@ public class RouteProcessor extends AbstractProcessor {
         out.println("        }");
     }
 
+    private void generateOpenApiSpec(List<ResourceClass> resources) {
+        // Find @ApiInfo if any resource has it
+        String title = "API";
+        String version = "1.0.0";
+        String infoDescription = "";
+        for (ResourceClass resource : resources) {
+            if (resource.apiInfo != null) {
+                title = resource.apiInfo.title();
+                version = resource.apiInfo.version();
+                infoDescription = resource.apiInfo.description();
+                break;
+            }
+        }
+
+        StringBuilder json = new StringBuilder();
+        json.append("{\n");
+        json.append("  \"openapi\": \"3.0.3\",\n");
+        json.append("  \"info\": {\n");
+        json.append("    \"title\": ").append(jsonString(title)).append(",\n");
+        json.append("    \"version\": ").append(jsonString(version));
+        if (!infoDescription.isEmpty()) {
+            json.append(",\n    \"description\": ").append(jsonString(infoDescription));
+        }
+        json.append("\n  },\n");
+
+        // Tags
+        json.append("  \"tags\": [\n");
+        for (int i = 0; i < resources.size(); i++) {
+            ResourceClass resource = resources.get(i);
+            json.append("    {\n");
+            json.append("      \"name\": ").append(jsonString(resource.tagName));
+            if (!resource.tagDescription.isEmpty()) {
+                json.append(",\n      \"description\": ").append(jsonString(resource.tagDescription));
+            }
+            json.append("\n    }");
+            if (i < resources.size() - 1) json.append(",");
+            json.append("\n");
+        }
+        json.append("  ],\n");
+
+        // Paths — group routes by path
+        Map<String, List<RouteWithTag>> pathMap = new LinkedHashMap<>();
+        for (ResourceClass resource : resources) {
+            for (RouteMethod route : resource.methods) {
+                String openApiPath = route.path.replaceAll("\\{([^}]+)\\}", "{$1}");
+                pathMap.computeIfAbsent(openApiPath, k -> new ArrayList<>())
+                        .add(new RouteWithTag(route, resource.tagName));
+            }
+        }
+
+        json.append("  \"paths\": {\n");
+        int pathIndex = 0;
+        for (Map.Entry<String, List<RouteWithTag>> entry : pathMap.entrySet()) {
+            String path = entry.getKey();
+            List<RouteWithTag> routes = entry.getValue();
+
+            json.append("    ").append(jsonString(path)).append(": {\n");
+            for (int r = 0; r < routes.size(); r++) {
+                RouteWithTag rwt = routes.get(r);
+                RouteMethod route = rwt.route;
+                String method = route.httpMethod.toLowerCase();
+
+                json.append("      ").append(jsonString(method)).append(": {\n");
+
+                // Operation ID
+                json.append("        \"operationId\": ").append(jsonString(route.methodName)).append(",\n");
+
+                // Tags
+                json.append("        \"tags\": [").append(jsonString(rwt.tagName)).append("],\n");
+
+                // Summary and description
+                if (!route.summary.isEmpty()) {
+                    json.append("        \"summary\": ").append(jsonString(route.summary)).append(",\n");
+                }
+                if (!route.description.isEmpty()) {
+                    json.append("        \"description\": ").append(jsonString(route.description)).append(",\n");
+                }
+
+                // Parameters
+                List<MethodParam> paramList = new ArrayList<>();
+                for (MethodParam p : route.params) {
+                    if (p.kind == MethodParam.Kind.PATH || p.kind == MethodParam.Kind.QUERY) {
+                        paramList.add(p);
+                    }
+                }
+                if (!paramList.isEmpty()) {
+                    json.append("        \"parameters\": [\n");
+                    for (int p = 0; p < paramList.size(); p++) {
+                        MethodParam param = paramList.get(p);
+                        String in = param.kind == MethodParam.Kind.PATH ? "path" : "query";
+                        json.append("          {\n");
+                        json.append("            \"name\": ").append(jsonString(param.name)).append(",\n");
+                        json.append("            \"in\": ").append(jsonString(in)).append(",\n");
+                        if (param.kind == MethodParam.Kind.PATH) {
+                            json.append("            \"required\": true,\n");
+                        }
+                        json.append("            \"schema\": { \"type\": \"string\" }\n");
+                        json.append("          }");
+                        if (p < paramList.size() - 1) json.append(",");
+                        json.append("\n");
+                    }
+                    json.append("        ],\n");
+                }
+
+                // Request body
+                boolean hasBody = route.params.stream().anyMatch(p -> p.kind == MethodParam.Kind.BODY);
+                if (hasBody) {
+                    json.append("        \"requestBody\": {\n");
+                    json.append("          \"required\": true,\n");
+                    json.append("          \"content\": {\n");
+                    json.append("            \"application/json\": {\n");
+                    json.append("              \"schema\": { \"type\": \"string\" }\n");
+                    json.append("            }\n");
+                    json.append("          }\n");
+                    json.append("        },\n");
+                }
+
+                // Responses
+                json.append("        \"responses\": {\n");
+                if (!route.responses.isEmpty()) {
+                    for (int ri = 0; ri < route.responses.size(); ri++) {
+                        ApiResponseInfo resp = route.responses.get(ri);
+                        json.append("          ").append(jsonString(String.valueOf(resp.code))).append(": {\n");
+                        json.append("            \"description\": ").append(jsonString(resp.description));
+                        if (!resp.mediaType.isEmpty()) {
+                            json.append(",\n            \"content\": {\n");
+                            json.append("              ").append(jsonString(resp.mediaType)).append(": {\n");
+                            json.append("                \"schema\": { \"type\": \"string\" }\n");
+                            json.append("              }\n");
+                            json.append("            }");
+                        }
+                        json.append("\n          }");
+                        if (ri < route.responses.size() - 1) json.append(",");
+                        json.append("\n");
+                    }
+                } else {
+                    json.append("          \"200\": {\n");
+                    json.append("            \"description\": \"Successful response\"\n");
+                    json.append("          }\n");
+                }
+                json.append("        }\n");
+
+                json.append("      }");
+                if (r < routes.size() - 1) json.append(",");
+                json.append("\n");
+            }
+            json.append("    }");
+            if (pathIndex < pathMap.size() - 1) json.append(",");
+            json.append("\n");
+            pathIndex++;
+        }
+        json.append("  }\n");
+        json.append("}\n");
+
+        try {
+            FileObject resource = processingEnv.getFiler().createResource(
+                    StandardLocation.CLASS_OUTPUT, "", "openapi.json");
+            try (PrintWriter out = new PrintWriter(resource.openWriter())) {
+                out.print(json);
+            }
+        } catch (IOException e) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                    "Failed to generate openapi.json: " + e.getMessage());
+        }
+    }
+
+    private String jsonString(String value) {
+        if (value == null) return "\"\"";
+        return "\"" + value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                + "\"";
+    }
+
     private String normalizePath(String path) {
         if (!path.startsWith("/")) {
             path = "/" + path;
@@ -256,11 +501,17 @@ public class RouteProcessor extends AbstractProcessor {
 
     // Internal model classes
 
-    private record ResourceClass(String qualifiedName, String simpleName, List<RouteMethod> methods) {}
+    private record ResourceClass(String qualifiedName, String simpleName, List<RouteMethod> methods,
+                                 String tagName, String tagDescription, ApiInfo apiInfo) {}
 
-    private record RouteMethod(String httpMethod, String path, String methodName, List<MethodParam> params) {}
+    private record RouteMethod(String httpMethod, String path, String methodName, List<MethodParam> params,
+                               String summary, String description, List<ApiResponseInfo> responses) {}
 
     private record MethodParam(Kind kind, String name, String typeName) {
         enum Kind { PATH, QUERY, BODY, REQUEST }
     }
+
+    private record ApiResponseInfo(int code, String description, String mediaType) {}
+
+    private record RouteWithTag(RouteMethod route, String tagName) {}
 }
