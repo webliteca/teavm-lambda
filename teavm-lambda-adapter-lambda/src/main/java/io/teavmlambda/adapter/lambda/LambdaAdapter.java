@@ -3,6 +3,8 @@ package io.teavmlambda.adapter.lambda;
 import io.teavmlambda.core.Request;
 import io.teavmlambda.core.Response;
 import io.teavmlambda.core.Router;
+import io.teavmlambda.logging.Logger;
+import io.teavmlambda.sentry.Sentry;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSObject;
@@ -13,14 +15,30 @@ import java.util.Map;
 public final class LambdaAdapter {
 
     private static Router router;
+    private static final Logger logger = new Logger("LambdaAdapter");
 
     private LambdaAdapter() {
     }
 
     public static void start(Router router) {
         LambdaAdapter.router = router;
+        initMonitoring();
         exportHandler(LambdaAdapter::handleRequest);
+        logger.info("Lambda handler registered");
     }
+
+    private static void initMonitoring() {
+        String sentryDsn = getEnv("SENTRY_DSN");
+        if (sentryDsn != null && !sentryDsn.isEmpty()) {
+            String environment = getEnv("SENTRY_ENVIRONMENT");
+            Sentry.init(sentryDsn, environment);
+            Sentry.setTag("platform", "lambda");
+            logger.info("Sentry initialized");
+        }
+    }
+
+    @JSBody(params = {"name"}, script = "return process.env[name] || '';")
+    private static native String getEnv(String name);
 
     @JSFunctor
     interface RequestHandler extends JSObject {
@@ -88,22 +106,45 @@ public final class LambdaAdapter {
     @JSBody(params = {"message"}, script = "return { message: String(message) };")
     private static native JSObject createErrorObject(String message);
 
+    @JSBody(script = "return typeof process !== 'undefined' && typeof process.hrtime === 'function'"
+            + " ? Number(process.hrtime.bigint()) / 1e6 : Date.now();")
+    private static native double now();
+
     static void handleRequest(JSObject event, ResultCallback resolve, ResultCallback reject) {
+        double startTime = now();
+        String httpMethod = null;
+        String path = null;
         try {
-            String httpMethod = getEventMethod(event);
-            String path = getEventPath(event);
+            httpMethod = getEventMethod(event);
+            path = getEventPath(event);
             String body = getEventBody(event);
 
             Map<String, String> headers = entriesToMap(jsObjectToEntries(getEventHeaders(event)));
             Map<String, String> queryParams = entriesToMap(jsObjectToEntries(getEventQueryParams(event)));
 
+            Sentry.addBreadcrumb("http", httpMethod + " " + path);
+
             Request request = new Request(httpMethod, path, headers, queryParams, body);
             Response response = router.route(request);
+
+            double duration = now() - startTime;
+            logger.info("request completed",
+                    "{\"method\":\"" + httpMethod
+                    + "\",\"path\":\"" + path
+                    + "\",\"status\":" + response.getStatusCode()
+                    + ",\"duration_ms\":" + Math.round(duration) + "}");
 
             String[] headersArr = mapToEntries(response.getHeaders());
             JSObject result = createApiGatewayResponse(response.getStatusCode(), response.getBody(), headersArr);
             resolve.call(result);
         } catch (Exception e) {
+            double duration = now() - startTime;
+            logger.error("request failed", e);
+            logger.error("request error context",
+                    "{\"method\":\"" + (httpMethod != null ? httpMethod : "unknown")
+                    + "\",\"path\":\"" + (path != null ? path : "unknown")
+                    + "\",\"duration_ms\":" + Math.round(duration) + "}");
+            Sentry.captureException(e);
             reject.call(createErrorObject(e.getMessage()));
         }
     }

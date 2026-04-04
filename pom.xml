@@ -45,6 +45,8 @@
         <module>teavm-lambda-nosqldb</module>
         <module>teavm-lambda-dynamodb</module>
         <module>teavm-lambda-firestore</module>
+        <module>teavm-lambda-logging</module>
+        <module>teavm-lambda-sentry</module>
         <module>teavm-lambda-demo</module>
         <module>teavm-lambda-demo-cloudrun</module>
         <module>teavm-lambda-demo-nosqldb</module>
@@ -111,6 +113,16 @@
             <dependency>
                 <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-firestore</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-logging</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-sentry</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
