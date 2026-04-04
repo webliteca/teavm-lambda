@@ -27,5 +27,13 @@
             <groupId>org.teavm</groupId>
             <artifactId>teavm-jso-apis</artifactId>
         </dependency>
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-logging</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-sentry</artifactId>
+        </dependency>
     </dependencies>
 </project>

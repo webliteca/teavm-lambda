@@ -5,6 +5,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",
     "@aws-sdk/lib-dynamodb": "^3.600.0",
-    "@google-cloud/firestore": "^7.6.0"
+    "@google-cloud/firestore": "^7.6.0",
+    "@sentry/node": "^9.0.0"
   }
 }

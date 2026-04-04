@@ -3,6 +3,8 @@ package io.teavmlambda.adapter.cloudrun;
 import io.teavmlambda.core.Request;
 import io.teavmlambda.core.Response;
 import io.teavmlambda.core.Router;
+import io.teavmlambda.logging.Logger;
+import io.teavmlambda.sentry.Sentry;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSObject;
@@ -13,17 +15,29 @@ import java.util.Map;
 public final class CloudRunAdapter {
 
     private static Router router;
+    private static final Logger logger = new Logger("CloudRunAdapter");
 
     private CloudRunAdapter() {
     }
 
     public static void start(Router router) {
         CloudRunAdapter.router = router;
+        initMonitoring();
         String port = getEnv("PORT");
         if (port == null || port.isEmpty()) {
             port = "8080";
         }
         startServer(CloudRunAdapter::handleRequest, Integer.parseInt(port));
+    }
+
+    private static void initMonitoring() {
+        String sentryDsn = getEnv("SENTRY_DSN");
+        if (sentryDsn != null && !sentryDsn.isEmpty()) {
+            String environment = getEnv("SENTRY_ENVIRONMENT");
+            Sentry.init(sentryDsn, environment);
+            Sentry.setTag("platform", "cloudrun");
+            logger.info("Sentry initialized");
+        }
     }
 
     @JSFunctor
@@ -122,21 +136,44 @@ public final class CloudRunAdapter {
             + "res.end(body || '');")
     private static native void sendResponse(JSObject res, int statusCode, String[] headersArr, String body);
 
+    @JSBody(script = "return typeof process !== 'undefined' && typeof process.hrtime === 'function'"
+            + " ? Number(process.hrtime.bigint()) / 1e6 : Date.now();")
+    private static native double now();
+
     static void handleRequest(JSObject req, JSObject res) {
+        double startTime = now();
+        String httpMethod = null;
+        String path = null;
         try {
-            String httpMethod = getMethod(req);
-            String path = getPath(req);
+            httpMethod = getMethod(req);
+            path = getPath(req);
             String body = getBody(req);
 
             Map<String, String> headers = entriesToMap(jsObjectToEntries(getHeaders(req)));
             Map<String, String> queryParams = entriesToMap(jsObjectToEntries(getQueryParams(req)));
 
+            Sentry.addBreadcrumb("http", httpMethod + " " + path);
+
             Request request = new Request(httpMethod, path, headers, queryParams, body);
             Response response = router.route(request);
+
+            double duration = now() - startTime;
+            logger.info("request completed",
+                    "{\"method\":\"" + httpMethod
+                    + "\",\"path\":\"" + path
+                    + "\",\"status\":" + response.getStatusCode()
+                    + ",\"duration_ms\":" + Math.round(duration) + "}");
 
             String[] headersArr = mapToEntries(response.getHeaders());
             sendResponse(res, response.getStatusCode(), headersArr, response.getBody());
         } catch (Exception e) {
+            double duration = now() - startTime;
+            logger.error("request failed", e);
+            logger.error("request error context",
+                    "{\"method\":\"" + (httpMethod != null ? httpMethod : "unknown")
+                    + "\",\"path\":\"" + (path != null ? path : "unknown")
+                    + "\",\"duration_ms\":" + Math.round(duration) + "}");
+            Sentry.captureException(e);
             sendResponse(res, 500, new String[0], "{\"error\":\"" + e.getMessage() + "\"}");
         }
     }
