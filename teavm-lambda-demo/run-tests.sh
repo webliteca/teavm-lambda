@@ -40,8 +40,9 @@ echo "=== Starting PostgreSQL ==="
 docker compose -f "$COMPOSE_FILE" up -d --wait
 echo
 
-# Detect the compose network name from the running containers
-NETWORK=$(docker network ls --format '{{.Name}}' | grep '_default$' | head -1)
+# Detect the compose network from the postgres container we just started
+NETWORK=$(docker inspect "$(docker compose -f "$COMPOSE_FILE" ps -q postgres)" \
+    --format '{{range $net, $conf := .NetworkSettings.Networks}}{{$net}}{{end}}' 2>/dev/null)
 
 if [ -z "$NETWORK" ]; then
     echo "ERROR: Could not detect Docker compose network"
