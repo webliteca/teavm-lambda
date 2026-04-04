@@ -4,32 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TeaVM Cloud Run Demo</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        h1 { color: #333; }
-        pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; overflow-x: auto; }
-        button { padding: 0.5rem 1rem; cursor: pointer; }
-        #output { white-space: pre-wrap; }
-    </style>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <h1>TeaVM Cloud Run Demo</h1>
-    <p>This page is served as a static file by the Cloud Run adapter.</p>
+    <header>
+        <h1>TeaVM Cloud Run Demo</h1>
+        <p class="subtitle">Java compiled to JS via TeaVM &mdash; serving static files + REST API</p>
+        <span id="health-badge" class="badge badge-pending">checking...</span>
+    </header>
 
-    <h2>API Test</h2>
-    <button onclick="fetchHealth()">GET /health</button>
-    <button onclick="fetchUsers()">GET /users</button>
-    <pre id="output">Click a button to call the API...</pre>
+    <main>
+        <section class="card">
+            <h2>Add User</h2>
+            <form id="add-user-form">
+                <div class="form-row">
+                    <input type="text" id="input-name" placeholder="Name" required>
+                    <input type="email" id="input-email" placeholder="Email" required>
+                    <button type="submit">Add</button>
+                </div>
+                <p id="form-error" class="error" hidden></p>
+            </form>
+        </section>
 
-    <script>
-        async function fetchHealth() {
-            const res = await fetch('/health');
-            document.getElementById('output').textContent = await res.text();
-        }
-        async function fetchUsers() {
-            const res = await fetch('/users');
-            document.getElementById('output').textContent = JSON.stringify(JSON.parse(await res.text()), null, 2);
-        }
-    </script>
+        <section class="card">
+            <h2>Users <span id="user-count" class="count"></span></h2>
+            <div id="users-loading" class="loading">Loading users...</div>
+            <table id="users-table" hidden>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+            </table>
+            <p id="users-empty" class="empty" hidden>No users yet. Add one above!</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            Static files served from <code>/public</code> &middot;
+            API at <code>/users</code> and <code>/health</code> &middot;
+            Powered by <a href="https://teavm.org">TeaVM</a>
+        </p>
+    </footer>
+
+    <script src="/app.js"></script>
 </body>
 </html>
