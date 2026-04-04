@@ -1,6 +1,0 @@
-io/teavmlambda/db/JsUtil.class
-io/teavmlambda/db/Db.class
-io/teavmlambda/db/Db$ResolveCallback.class
-io/teavmlambda/db/PgPool.class
-io/teavmlambda/db/PgResult.class
-io/teavmlambda/db/Db$RejectCallback.class
