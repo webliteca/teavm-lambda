@@ -2,6 +2,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: TeaVM Lambda Demo - Users REST API
 
+Parameters:
+  DatabaseUrl:
+    Type: String
+    Description: PostgreSQL connection URL
+    # For sam local: use Docker bridge gateway IP (172.17.0.1) to reach host PostgreSQL.
+    # For docker-compose PostgreSQL: use the service name (postgres).
+    # For AWS deployment: override with the actual RDS/Aurora endpoint.
+    Default: postgresql://demo:demo@172.17.0.1:5432/demo
+
 Globals:
   Function:
     Timeout: 30
@@ -16,10 +25,7 @@ Resources:
       Runtime: nodejs22.x
       Environment:
         Variables:
-          # For sam local: use Docker bridge gateway IP (172.17.0.1) to reach host PostgreSQL.
-          # For docker-compose PostgreSQL: use the service name (postgres).
-          # For AWS deployment: override with the actual RDS/Aurora endpoint.
-          DATABASE_URL: postgresql://demo:demo@172.17.0.1:5432/demo
+          DATABASE_URL: !Ref DatabaseUrl
       Events:
         RootRequest:
           Type: Api
@@ -31,3 +37,11 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  DemoFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt DemoFunction.Arn
