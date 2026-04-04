@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeaVM Cloud Run Demo</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header>
+        <h1>TeaVM Cloud Run Demo</h1>
+        <p class="subtitle">Java compiled to JS via TeaVM &mdash; serving static files + REST API</p>
+        <span id="health-badge" class="badge badge-pending">checking...</span>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>Add User</h2>
+            <form id="add-user-form">
+                <div class="form-row">
+                    <input type="text" id="input-name" placeholder="Name" required>
+                    <input type="email" id="input-email" placeholder="Email" required>
+                    <button type="submit">Add</button>
+                </div>
+                <p id="form-error" class="error" hidden></p>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Users <span id="user-count" class="count"></span></h2>
+            <div id="users-loading" class="loading">Loading users...</div>
+            <table id="users-table" hidden>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+            </table>
+            <p id="users-empty" class="empty" hidden>No users yet. Add one above!</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            Static files served from <code>/public</code> &middot;
+            API at <code>/users</code> and <code>/health</code> &middot;
+            Powered by <a href="https://teavm.org">TeaVM</a>
+        </p>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+</html>

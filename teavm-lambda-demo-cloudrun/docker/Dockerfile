@@ -15,8 +15,12 @@ COPY teavm-lambda-processor/pom.xml teavm-lambda-processor/
 COPY teavm-lambda-adapter-lambda/pom.xml teavm-lambda-adapter-lambda/
 COPY teavm-lambda-adapter-cloudrun/pom.xml teavm-lambda-adapter-cloudrun/
 COPY teavm-lambda-db/pom.xml teavm-lambda-db/
+COPY teavm-lambda-nosqldb/pom.xml teavm-lambda-nosqldb/
+COPY teavm-lambda-dynamodb/pom.xml teavm-lambda-dynamodb/
+COPY teavm-lambda-firestore/pom.xml teavm-lambda-firestore/
 COPY teavm-lambda-demo/pom.xml teavm-lambda-demo/
 COPY teavm-lambda-demo-cloudrun/pom.xml teavm-lambda-demo-cloudrun/
+COPY teavm-lambda-demo-nosqldb/pom.xml teavm-lambda-demo-nosqldb/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo-cloudrun -am -q || true
 
@@ -32,6 +36,7 @@ COPY teavm-lambda-demo/docker/bootstrap.js teavm-lambda-demo/docker/
 COPY teavm-lambda-demo-cloudrun/src teavm-lambda-demo-cloudrun/src
 COPY teavm-lambda-demo-cloudrun/docker/package.json teavm-lambda-demo-cloudrun/docker/
 COPY teavm-lambda-demo-cloudrun/docker/server.js teavm-lambda-demo-cloudrun/docker/
+COPY teavm-lambda-demo-cloudrun/src/main/webapp teavm-lambda-demo-cloudrun/src/main/webapp
 
 RUN mvn clean package -pl teavm-lambda-demo-cloudrun -am -Dexec.skip=true -q
 
