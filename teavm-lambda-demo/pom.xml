@@ -14,6 +14,10 @@
     <name>TeaVM Lambda Demo</name>
     <description>Demo application showing teavm-lambda in action</description>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>ca.weblite</groupId>

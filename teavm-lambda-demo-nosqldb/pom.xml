@@ -14,6 +14,10 @@
     <name>TeaVM Lambda Demo NoSQL</name>
     <description>Demo application using the implementation-agnostic NoSQL API</description>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>ca.weblite</groupId>
