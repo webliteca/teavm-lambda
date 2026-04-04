@@ -1,0 +1,30 @@
+# Isolated test environment. PostgreSQL runs in Docker with no host port exposure.
+# SAM local invoke sends test events to Lambda containers on this network.
+#
+# Usage:
+#   mvn clean package -pl teavm-lambda-demo -am
+#   ./teavm-lambda-demo/run-tests.sh
+#
+# What happens:
+#   1. docker-compose starts PostgreSQL (no host ports)
+#   2. sam local invoke runs each test event as a Lambda invocation
+#   3. Lambda containers join this compose network to reach PostgreSQL
+#   4. Test script asserts on Lambda response JSON
+#   5. docker-compose tears down PostgreSQL
+#
+# No host ports used. No port conflicts possible.
+#
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - ./teavm-lambda-demo/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo"]
+      interval: 2s
+      timeout: 5s
+      retries: 10

@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TeaVM Lambda Demo - Test configuration
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  DemoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: teavm-lambda-demo/target/lambda/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          # Uses compose service name - Lambda containers join the compose network
+          DATABASE_URL: postgresql://demo:demo@postgres:5432/demo
+      Events:
+        RootRequest:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        ProxyRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
