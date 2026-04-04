@@ -11,7 +11,7 @@
 # Usage:
 #   ./teavm-lambda-demo/run-tests.sh
 #
-set -euo pipefail
+set -eo pipefail
 
 cd "$(dirname "$0")/.."
 
@@ -21,32 +21,55 @@ EVENTS_DIR=teavm-lambda-demo/events
 PASS=0
 FAIL=0
 
-# Detect the compose network name
-NETWORK=$(docker compose -f "$COMPOSE_FILE" config --format json 2>/dev/null \
-    | jq -r '.networks | to_entries[0].value.name // empty' 2>/dev/null)
+cleanup() {
+    echo
+    echo "=== Tearing down ==="
+    docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# --- Setup ---
+echo "=== Starting PostgreSQL ==="
+docker compose -f "$COMPOSE_FILE" up -d --wait
+echo
+
+# Detect the compose network name from the running containers
+NETWORK=$(docker network ls --format '{{.Name}}' | grep "$(docker compose -f "$COMPOSE_FILE" config --format json 2>/dev/null | jq -r '.name // empty')_default" 2>/dev/null || true)
 if [ -z "$NETWORK" ]; then
-    # Fallback: derive from directory name (compose default behavior)
-    COMPOSE_PROJECT=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]//g')
-    NETWORK="${COMPOSE_PROJECT}_default"
+    # Fallback: find the network that docker-compose just created
+    NETWORK=$(docker network ls --format '{{.Name}}' | grep '_default$' | head -1)
 fi
+
+if [ -z "$NETWORK" ]; then
+    echo "ERROR: Could not detect Docker compose network"
+    exit 1
+fi
+echo "Using Docker network: $NETWORK"
+echo
 
 invoke() {
     local event_file="$1"
+    local output
     # sam local invoke exits non-zero after the Lambda container stops - that's normal.
-    # Capture stdout (the JSON response), discard stderr (SAM logs).
-    SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
+    # Capture both stdout and stderr, then extract the JSON response.
+    output=$(SAM_CLI_TELEMETRY=0 sam local invoke DemoFunction \
         --template "$TEMPLATE" \
         --event "$event_file" \
         --docker-network "$NETWORK" \
-        2>/dev/null || true
+        2>&1) || true
+    # Extract the last JSON object line from the output
+    echo "$output" | grep '^{' | tail -1 || echo ""
 }
 
 assert_status() {
     local desc="$1" event="$2" expected_status="$3"
-    local raw response status
-    raw=$(invoke "$EVENTS_DIR/$event")
-    # Extract the JSON response line (SAM may output extra text)
-    response=$(echo "$raw" | grep '^{' | tail -1)
+    local response status
+    response=$(invoke "$EVENTS_DIR/$event")
+    if [ -z "$response" ]; then
+        echo "  FAIL: $desc - no response from Lambda"
+        FAIL=$((FAIL + 1))
+        return
+    fi
     status=$(echo "$response" | jq -r '.statusCode // empty')
     if [ "$status" = "$expected_status" ]; then
         echo "  PASS: $desc (status $status)"
@@ -60,9 +83,13 @@ assert_status() {
 
 assert_body_contains() {
     local desc="$1" event="$2" expected="$3"
-    local raw response body
-    raw=$(invoke "$EVENTS_DIR/$event")
-    response=$(echo "$raw" | grep '^{' | tail -1)
+    local response body
+    response=$(invoke "$EVENTS_DIR/$event")
+    if [ -z "$response" ]; then
+        echo "  FAIL: $desc - no response from Lambda"
+        FAIL=$((FAIL + 1))
+        return
+    fi
     body=$(echo "$response" | jq -r '.body // empty')
     if echo "$body" | grep -q "$expected"; then
         echo "  PASS: $desc"
@@ -73,18 +100,6 @@ assert_body_contains() {
         FAIL=$((FAIL + 1))
     fi
 }
-
-cleanup() {
-    echo
-    echo "=== Tearing down ==="
-    docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
-}
-trap cleanup EXIT
-
-# --- Setup ---
-echo "=== Starting PostgreSQL ==="
-docker compose -f "$COMPOSE_FILE" up -d --wait
-echo
 
 echo "=== Running integration tests ==="
 echo "    (each test invokes Lambda via SAM in Docker)"
