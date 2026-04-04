@@ -1,0 +1,7 @@
+{
+  "httpMethod": "DELETE",
+  "path": "/users/3",
+  "headers": {},
+  "queryStringParameters": null,
+  "body": null
+}

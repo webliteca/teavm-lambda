@@ -1,0 +1,7 @@
+{
+  "httpMethod": "POST",
+  "path": "/users",
+  "headers": {"Content-Type": "application/json"},
+  "queryStringParameters": null,
+  "body": "{\"id\":\"3\",\"name\":\"TestUser\",\"email\":\"test@example.com\"}"
+}
