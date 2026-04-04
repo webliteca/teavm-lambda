@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.teavmlambda</groupId>
+    <artifactId>teavm-lambda-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>TeaVM Lambda</name>
+    <description>Thin library for deploying TeaVM-compiled Java applications as AWS Lambda functions</description>
+
+    <modules>
+        <module>teavm-lambda-core</module>
+        <module>teavm-lambda-processor</module>
+        <module>teavm-lambda-adapter-lambda</module>
+        <module>teavm-lambda-db</module>
+        <module>teavm-lambda-demo</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <teavm.version>0.10.2</teavm.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-classlib</artifactId>
+                <version>${teavm.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-jso</artifactId>
+                <version>${teavm.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-jso-apis</artifactId>
+                <version>${teavm.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-processor</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-adapter-lambda</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.teavmlambda</groupId>
+                <artifactId>teavm-lambda-db</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
