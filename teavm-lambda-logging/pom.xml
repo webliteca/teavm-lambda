@@ -12,12 +12,5 @@
 
     <artifactId>teavm-lambda-logging</artifactId>
     <name>TeaVM Lambda Logging</name>
-    <description>Structured JSON logging via Node.js console for TeaVM Lambda</description>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.teavm</groupId>
-            <artifactId>teavm-jso</artifactId>
-        </dependency>
-    </dependencies>
+    <description>Platform-neutral structured JSON logging for TeaVM Lambda</description>
 </project>

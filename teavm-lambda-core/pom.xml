@@ -14,10 +14,5 @@
     <name>TeaVM Lambda Core</name>
     <description>Core annotations, Request/Response types, and Router interface</description>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.teavm</groupId>
-            <artifactId>teavm-jso</artifactId>
-        </dependency>
-    </dependencies>
+    <!-- No platform-specific dependencies. Core is pure Java. -->
 </project>

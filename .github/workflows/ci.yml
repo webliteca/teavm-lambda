@@ -7,7 +7,147 @@ on:
     branches: [ main, master ]
 
 jobs:
+  # ─── Stage 1: Build all modules and check SPI parity ───────────────
   build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build all modules
+        run: mvn -B clean package -DskipTests
+
+      - name: Check SPI platform parity
+        run: ./check-spi-parity.sh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          retention-days: 1
+          path: |
+            **/target/
+            !**/target/archive-tmp/
+
+  # ─── Stage 2: Integration tests (all run in parallel) ──────────────
+
+  test-lambda-teavm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Build TeaVM Lambda demo
+        run: mvn -B clean package -pl teavm-lambda-demo -am -P teavm
+
+      - name: Run Lambda integration tests (TeaVM/Node.js)
+        run: ./teavm-lambda-demo/run-tests.sh
+
+  test-lambda-jvm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Start PostgreSQL
+        run: docker compose -f docker-compose.jvm-test.yml up -d --wait
+
+      - name: Build JVM demo (standalone server)
+        run: mvn -B clean package -pl teavm-lambda-demo -am -P jvm-server
+
+      - name: Start JVM server
+        run: |
+          DATABASE_URL=postgresql://demo:demo@localhost:5432/demo \
+            java -jar teavm-lambda-demo/target/teavm-lambda-demo-0.1.0-SNAPSHOT.jar &
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Server is ready"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Server failed to start"
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Run integration tests against JVM
+        run: ./teavm-lambda-demo/test.sh http://localhost:8080
+
+  test-cloudrun:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Cloud Run demo
+        run: mvn -B clean package -pl teavm-lambda-demo-cloudrun -am
+
+      - name: Run Cloud Run integration tests
+        run: ./teavm-lambda-demo-cloudrun/run-tests.sh
+
+  test-nosqldb:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Build NoSQL demo
+        run: mvn -B clean package -pl teavm-lambda-demo-nosqldb -am
+
+      - name: Run NoSQL integration tests
+        run: ./teavm-lambda-demo-nosqldb/run-tests.sh
+
+  # ─── Stage 3: Publish (only on push to main) ───────────────────────
+
+  deploy:
+    needs: [test-lambda-teavm, test-lambda-jvm, test-cloudrun, test-nosqldb]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,11 +163,7 @@ jobs:
           cache: maven
           server-id: github
 
-      - name: Build
-        run: mvn -B clean package -DskipTests
-
       - name: Deploy snapshots to GitHub Packages
-        if: github.event_name == 'push'
-        run: mvn -B package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
+        run: mvn -B clean package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
