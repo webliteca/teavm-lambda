@@ -27,6 +27,9 @@ COPY teavm-lambda-sentry/pom.xml teavm-lambda-sentry/
 COPY teavm-lambda-nosqldb/pom.xml teavm-lambda-nosqldb/
 COPY teavm-lambda-dynamodb/pom.xml teavm-lambda-dynamodb/
 COPY teavm-lambda-firestore/pom.xml teavm-lambda-firestore/
+COPY teavm-lambda-image-api/pom.xml teavm-lambda-image-api/
+COPY teavm-lambda-image/pom.xml teavm-lambda-image/
+COPY teavm-lambda-image-jvm/pom.xml teavm-lambda-image-jvm/
 COPY teavm-lambda-demo/pom.xml teavm-lambda-demo/
 COPY teavm-lambda-demo-cloudrun/pom.xml teavm-lambda-demo-cloudrun/
 COPY teavm-lambda-demo-nosqldb/pom.xml teavm-lambda-demo-nosqldb/
