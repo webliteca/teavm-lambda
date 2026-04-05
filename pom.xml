@@ -53,6 +53,9 @@
         <module>teavm-lambda-firestore</module>
         <module>teavm-lambda-logging</module>
         <module>teavm-lambda-sentry</module>
+        <module>teavm-lambda-image-api</module>
+        <module>teavm-lambda-image</module>
+        <module>teavm-lambda-image-jvm</module>
         <module>teavm-lambda-demo</module>
         <module>teavm-lambda-demo-cloudrun</module>
         <module>teavm-lambda-demo-nosqldb</module>
@@ -149,6 +152,21 @@
             <dependency>
                 <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-firestore</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-image-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-image</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-image-jvm</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
