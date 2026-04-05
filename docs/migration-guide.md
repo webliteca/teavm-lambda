@@ -17,6 +17,27 @@ mvn clean package            # Node.js/Lambda (default)
 mvn clean package -P jvm     # JVM/Lambda
 ```
 
+## Package Namespace Convention
+
+All packages now live under `ca.weblite.teavmlambda`. The second segment tells
+you whether code is platform-neutral or platform-specific:
+
+```
+ca.weblite.teavmlambda.api.*          — WORA API (safe to use everywhere)
+ca.weblite.teavmlambda.api.annotation — @Path, @GET, @POST, etc.
+ca.weblite.teavmlambda.api.db         — Database, DbRow, Json, DatabaseFactory
+ca.weblite.teavmlambda.api.logging    — Logger, LogHandler
+ca.weblite.teavmlambda.api.sentry     — Sentry, SentryHandler
+ca.weblite.teavmlambda.impl.js.*      — Node.js/TeaVM implementations
+ca.weblite.teavmlambda.impl.jvm.*     — JVM implementations
+ca.weblite.teavmlambda.processor      — compile-time annotation processor
+ca.weblite.teavmlambda.generated      — generated router
+```
+
+**Rule:** Application code should only import from `ca.weblite.teavmlambda.api.*`.
+If you see `impl.js` or `impl.jvm` in a resource class import, it's a
+portability bug.
+
 ---
 
 ## Step 1: Migrate Resource Classes
@@ -33,6 +54,8 @@ JS-specific types with their platform-neutral counterparts.
 | `import io.teavmlambda.db.JsUtil;` | `import ca.weblite.teavmlambda.api.db.Json;` |
 | `import org.teavm.jso.JSObject;` | `import ca.weblite.teavmlambda.api.db.DbRow;` |
 | `import org.teavm.jso.core.JSArray;` | *(remove — not needed)* |
+| `import io.teavmlambda.core.Response;` | `import ca.weblite.teavmlambda.api.Response;` |
+| `import io.teavmlambda.core.annotation.*;` | `import ca.weblite.teavmlambda.api.annotation.*;` |
 
 ### Type replacements
 
@@ -111,8 +134,8 @@ String email = parsed.getString("email");
 
 Before:
 ```java
-import ca.weblite.teavmlambda.api.Response;
-import ca.weblite.teavmlambda.api.annotation.*;
+import io.teavmlambda.core.Response;
+import io.teavmlambda.core.annotation.*;
 import io.teavmlambda.db.Db;
 import io.teavmlambda.db.JsUtil;
 import io.teavmlambda.db.PgResult;
@@ -262,10 +285,10 @@ Platform.start(router);
 Before:
 ```java
 import io.teavmlambda.adapter.lambda.LambdaAdapter;
-import ca.weblite.teavmlambda.api.Router;
+import io.teavmlambda.core.Router;
 import io.teavmlambda.db.Db;
 import io.teavmlambda.db.PgPool;
-import ca.weblite.teavmlambda.generated.GeneratedRouter;
+import io.teavmlambda.generated.GeneratedRouter;
 import org.teavm.jso.JSBody;
 
 public class Main {
@@ -505,18 +528,20 @@ Both should produce identical results.
 
 ## Quick Reference: What Not to Use in WORA Code
 
-These are **JS-only** — avoid in application code:
+These are **JS-only** — if you see them in application code, the code is not portable:
 
 | Do not use | Use instead |
 |---|---|
 | `@JSBody` | `Platform.env()` |
 | `org.teavm.jso.*` | `ca.weblite.teavmlambda.api.db.*` |
-| `Db` / `PgPool` | `DatabaseFactory.create()` |
-| `PgResult` | `DbResult` |
+| `io.teavmlambda.db.Db` / `PgPool` | `DatabaseFactory.create()` |
+| `io.teavmlambda.db.PgResult` | `DbResult` |
 | `JSObject` / `JSArray` | `DbRow` / `List<DbRow>` |
-| `JsUtil.toJson()` | `row.toJson()` / `result.toJsonArray()` |
-| `JsUtil.parseJson()` | `Json.parse()` |
-| `JsUtil.getStringProperty()` | `row.getString()` |
-| `LambdaAdapter.start()` | `Platform.start()` |
-| `CloudRunAdapter.start()` | `Platform.start()` |
-| `process.env` | `Platform.env()` |
+| `io.teavmlambda.db.JsUtil.toJson()` | `row.toJson()` / `result.toJsonArray()` |
+| `io.teavmlambda.db.JsUtil.parseJson()` | `Json.parse()` |
+| `io.teavmlambda.db.JsUtil.getStringProperty()` | `row.getString()` |
+| `io.teavmlambda.adapter.lambda.LambdaAdapter` | `Platform.start()` |
+| `io.teavmlambda.adapter.cloudrun.CloudRunAdapter` | `Platform.start()` |
+| `process.env` (via `@JSBody`) | `Platform.env()` |
+| Any `ca.weblite.teavmlambda.impl.js.*` import | Corresponding `ca.weblite.teavmlambda.api.*` import |
+| Any `ca.weblite.teavmlambda.impl.jvm.*` import | Corresponding `ca.weblite.teavmlambda.api.*` import |
