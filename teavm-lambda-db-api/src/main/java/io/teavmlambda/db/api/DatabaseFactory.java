@@ -29,6 +29,19 @@ public final class DatabaseFactory {
     }
 
     /**
+     * Returns true if a DatabaseProvider has been set or discovered via ServiceLoader.
+     */
+    public static boolean isAvailable() {
+        if (provider != null) return true;
+        try {
+            getProvider();
+            return true;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    /**
      * Creates a new Database instance connected to the given URL.
      *
      * @param connectionUrl a PostgreSQL-style connection URL

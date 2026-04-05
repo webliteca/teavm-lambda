@@ -25,6 +25,14 @@ public final class Resources {
     }
 
     /**
+     * Returns true. Resources is always available — it falls back to
+     * classpath loading on JVM if no explicit loader is registered.
+     */
+    public static boolean isAvailable() {
+        return true;
+    }
+
+    /**
      * Loads a resource as text.
      *
      * @param name resource path, e.g. {@code "/openapi.json"} or {@code "openapi.json"}

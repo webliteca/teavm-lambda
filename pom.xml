@@ -39,6 +39,7 @@
     <modules>
         <module>teavm-lambda-core</module>
         <module>teavm-lambda-core-js</module>
+        <module>teavm-lambda-core-jvm</module>
         <module>teavm-lambda-processor</module>
         <module>teavm-lambda-adapter-lambda</module>
         <module>teavm-lambda-adapter-lambda-jvm</module>
@@ -88,6 +89,11 @@
             <dependency>
                 <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-core-js</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-core-jvm</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

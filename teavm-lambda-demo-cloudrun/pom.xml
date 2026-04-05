@@ -208,6 +208,10 @@
                 </dependency>
                 <dependency>
                     <groupId>ca.weblite</groupId>
+                    <artifactId>teavm-lambda-core-jvm</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>ca.weblite</groupId>
                     <artifactId>teavm-lambda-db-jvm</artifactId>
                 </dependency>
                 <dependency>

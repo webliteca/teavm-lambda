@@ -33,6 +33,19 @@ public final class Platform {
     }
 
     /**
+     * Returns true if a PlatformAdapter has been set or discovered.
+     */
+    public static boolean isAvailable() {
+        if (adapter != null) return true;
+        try {
+            getAdapter();
+            return !(adapter instanceof DefaultJvmPlatformAdapter);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Reads an environment variable.
      *
      * @param name the variable name

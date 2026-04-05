@@ -48,6 +48,7 @@ classDiagram
             +body(String) Response
         }
         class Platform {
+            +isAvailable()$ boolean
             +env(String)$ String
             +env(String, String)$ String
             +start(Router)$
@@ -62,7 +63,38 @@ classDiagram
             +loadText(String) String
         }
         class Resources {
+            +isAvailable()$ boolean
             +loadText(String)$ String
+        }
+    }
+
+    namespace Logging {
+        class Logger {
+            +isAvailable()$ boolean
+            +info(String)
+            +warn(String)
+            +error(String)
+            +error(String, Throwable)
+        }
+        class LogHandler {
+            <<interface>>
+            +log(String level, String loggerName, String message, String contextJson)
+        }
+    }
+
+    namespace ErrorTracking {
+        class Sentry {
+            +isAvailable()$ boolean
+            +init(String dsn)$
+            +captureException(Throwable)$
+            +setTag(String, String)$
+            +addBreadcrumb(String, String)$
+        }
+        class SentryHandler {
+            <<interface>>
+            +init(String, String)
+            +captureError(String, String)
+            +setTag(String, String)
         }
     }
 
@@ -111,6 +143,7 @@ classDiagram
             +toJson() String
         }
         class DatabaseFactory {
+            +isAvailable()$ boolean
             +create(String)$ Database
         }
         class DatabaseProvider {
@@ -118,6 +151,7 @@ classDiagram
             +create(String) Database
         }
         class Json {
+            +isAvailable()$ boolean
             +parse(String)$ DbRow
         }
         class JsonProvider {
@@ -176,6 +210,13 @@ classDiagram
             +loadText(String) String
             +install()$
         }
+        class NodeLogHandler {
+            +log(String, String, String, String)
+        }
+        class NodeSentryHandler {
+            +init(String, String)
+            +captureError(String, String)
+        }
     }
 
     %% ═══════════════════════════════════════════════════════════
@@ -225,6 +266,18 @@ classDiagram
     }
 
     %% ═══════════════════════════════════════════════════════════
+    %% JVM CROSS-CUTTING (core-jvm)
+
+    namespace JVM_Core {
+        class JvmLogHandler {
+            +log(String, String, String, String)
+        }
+        class NoOpSentryHandler {
+            +init(String, String)
+            +captureError(String, String)
+        }
+    }
+
     %% COMPILE-TIME
     %% ═══════════════════════════════════════════════════════════
 
@@ -254,6 +307,8 @@ classDiagram
     Resources --> ResourceLoader : delegates via ServiceLoader
     DatabaseFactory --> DatabaseProvider : delegates via ServiceLoader
     Json --> JsonProvider : delegates via ServiceLoader
+    Logger --> LogHandler : delegates via ServiceLoader
+    Sentry --> SentryHandler : delegates via ServiceLoader
     Database --> DbResult : returns
     DbResult --> DbRow : contains
 
@@ -274,6 +329,8 @@ classDiagram
     JsDbRow ..|> DbRow
     JsJsonProvider ..|> JsonProvider
     NodeResourceLoader ..|> ResourceLoader
+    NodeLogHandler ..|> LogHandler
+    NodeSentryHandler ..|> SentryHandler
 
     %% JVM implementations
     LambdaJvmPlatformAdapter ..|> PlatformAdapter
@@ -286,6 +343,8 @@ classDiagram
     JdbcDbResult ..|> DbResult
     JdbcDbRow ..|> DbRow
     JvmJsonUtil ..|> JsonProvider
+    JvmLogHandler ..|> LogHandler
+    NoOpSentryHandler ..|> SentryHandler
 
     %% ═══════════════════════════════════════════════════════════
     %% STYLING
@@ -309,6 +368,11 @@ classDiagram
     style PathParam fill:#e3f2fd,stroke:#1565c0
     style Body fill:#e3f2fd,stroke:#1565c0
 
+    style Logger fill:#e3f2fd,stroke:#1565c0
+    style LogHandler fill:#e3f2fd,stroke:#1565c0
+    style Sentry fill:#e3f2fd,stroke:#1565c0
+    style SentryHandler fill:#e3f2fd,stroke:#1565c0
+
     style Database fill:#fff3e0,stroke:#e65100
     style DbResult fill:#fff3e0,stroke:#e65100
     style DbRow fill:#fff3e0,stroke:#e65100
@@ -327,6 +391,8 @@ classDiagram
     style JsDbRow fill:#fce4ec,stroke:#c62828
     style JsJsonProvider fill:#fce4ec,stroke:#c62828
     style NodeResourceLoader fill:#fce4ec,stroke:#c62828
+    style NodeLogHandler fill:#fce4ec,stroke:#c62828
+    style NodeSentryHandler fill:#fce4ec,stroke:#c62828
 
     style LambdaJvmPlatformAdapter fill:#f3e5f5,stroke:#6a1b9a
     style JvmLambdaAdapter fill:#f3e5f5,stroke:#6a1b9a
@@ -337,6 +403,8 @@ classDiagram
     style JdbcDbResult fill:#f3e5f5,stroke:#6a1b9a
     style JdbcDbRow fill:#f3e5f5,stroke:#6a1b9a
     style JvmJsonUtil fill:#f3e5f5,stroke:#6a1b9a
+    style JvmLogHandler fill:#f3e5f5,stroke:#6a1b9a
+    style NoOpSentryHandler fill:#f3e5f5,stroke:#6a1b9a
 
     style RouteProcessor fill:#fffde7,stroke:#f57f17
 ```
@@ -351,6 +419,9 @@ classDiagram
 
 **Key architectural points:**
 - User code (green) only depends on interfaces (blue + orange) — never on implementations
-- `ServiceLoader` bridges the gap: `Platform`, `DatabaseFactory`, `Json`, `Resources` each discover their implementation at runtime from `META-INF/services`
+- Six SPIs with ServiceLoader discovery: `Platform`, `DatabaseFactory`, `Json`, `Resources`, `Logger`, `Sentry`
+- Every factory has `isAvailable()` for graceful feature detection at runtime
 - Swapping platform = swapping Maven dependencies (red vs purple), zero code changes
+- `check-spi-parity.sh` validates that every SPI has both JS and JVM implementations
+- `run-parity-tests.sh` runs the same integration tests against both platform builds
 - The annotation processor (yellow) generates `GeneratedRouter` at compile time from `@Path`/`@GET`/etc.

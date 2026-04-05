@@ -31,6 +31,19 @@ public final class Json {
     }
 
     /**
+     * Returns true if a JsonProvider has been set or discovered via ServiceLoader.
+     */
+    public static boolean isAvailable() {
+        if (provider != null) return true;
+        try {
+            getProvider();
+            return true;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    /**
      * Parses a JSON object string into a {@link DbRow}.
      *
      * @param json a JSON object string

@@ -3,6 +3,7 @@ package io.teavmlambda.adapter.lambda;
 import io.teavmlambda.core.Request;
 import io.teavmlambda.core.Response;
 import io.teavmlambda.core.Router;
+import io.teavmlambda.core.js.NodeLogHandler;
 import io.teavmlambda.core.js.NodeResourceLoader;
 import io.teavmlambda.logging.Logger;
 import io.teavmlambda.sentry.Sentry;
@@ -24,6 +25,7 @@ public final class LambdaAdapter {
     public static void start(Router router) {
         LambdaAdapter.router = router;
         NodeResourceLoader.install();
+        NodeLogHandler.install();
         initMonitoring();
         exportHandler(LambdaAdapter::handleRequest);
         logger.info("Lambda handler registered");
