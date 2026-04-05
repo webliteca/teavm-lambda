@@ -40,7 +40,8 @@ trap cleanup EXIT
 
 # --- Setup ---
 echo "=== Starting MinIO ==="
-docker compose -f "$COMPOSE_FILE" up -d --wait
+docker compose -f "$COMPOSE_FILE" up -d minio --wait
+docker compose -f "$COMPOSE_FILE" up -d minio-seed
 echo
 
 # Wait for the seed container to finish

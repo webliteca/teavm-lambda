@@ -40,7 +40,8 @@ trap cleanup EXIT
 
 # --- Setup ---
 echo "=== Starting ElasticMQ ==="
-docker compose -f "$COMPOSE_FILE" up -d --wait
+docker compose -f "$COMPOSE_FILE" up -d elasticmq --wait
+docker compose -f "$COMPOSE_FILE" up -d elasticmq-seed
 echo
 
 # Wait for the seed container to finish
