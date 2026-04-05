@@ -1,29 +1,24 @@
 package io.teavmlambda.db.jvm;
 
 import io.teavmlambda.db.api.DbRow;
-import io.teavmlambda.db.api.JsonUtil;
+import io.teavmlambda.db.api.JsonProvider;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Lightweight JSON utility for JVM that parses simple JSON objects into DbRow instances.
+ * Lightweight JSON provider for JVM that parses simple JSON objects into DbRow instances.
  * Handles the common case of flat JSON objects with string, number, boolean, and null values.
  */
-public class JvmJsonUtil implements JsonUtil {
+public class JvmJsonUtil implements JsonProvider {
 
     @Override
-    public DbRow parseJson(String json) {
+    public DbRow parse(String json) {
         if (json == null || json.isBlank()) {
             return new JdbcDbRow(Map.of());
         }
         Map<String, Object> map = parseObject(json.trim());
         return new JdbcDbRow(map);
-    }
-
-    @Override
-    public String toJson(DbRow row) {
-        return row.toJson();
     }
 
     private static Map<String, Object> parseObject(String json) {

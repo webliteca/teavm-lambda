@@ -2,7 +2,6 @@ package io.teavmlambda.db;
 
 import io.teavmlambda.db.api.Database;
 import io.teavmlambda.db.api.DatabaseProvider;
-import io.teavmlambda.db.api.JsonUtil;
 
 /**
  * Node.js/TeaVM implementation of {@link DatabaseProvider}.
@@ -13,11 +12,6 @@ public class JsDatabaseProvider implements DatabaseProvider {
     @Override
     public Database create(String connectionUrl) {
         return new JsDatabase(connectionUrl);
-    }
-
-    @Override
-    public JsonUtil jsonUtil() {
-        return new JsJsonUtil();
     }
 
     /**

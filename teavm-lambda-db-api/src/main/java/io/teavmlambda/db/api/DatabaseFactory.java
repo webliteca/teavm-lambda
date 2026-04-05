@@ -40,16 +40,6 @@ public final class DatabaseFactory {
         return getProvider().create(connectionUrl);
     }
 
-    /**
-     * Creates a new {@link JsonUtil} instance for the current platform.
-     *
-     * @return a JsonUtil instance
-     * @throws IllegalStateException if no provider is available
-     */
-    public static JsonUtil jsonUtil() {
-        return getProvider().jsonUtil();
-    }
-
     private static DatabaseProvider getProvider() {
         DatabaseProvider p = provider;
         if (p != null) {

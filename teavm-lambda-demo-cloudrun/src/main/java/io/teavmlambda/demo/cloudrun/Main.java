@@ -4,7 +4,6 @@ import io.teavmlambda.core.Platform;
 import io.teavmlambda.core.Router;
 import io.teavmlambda.db.api.Database;
 import io.teavmlambda.db.api.DatabaseFactory;
-import io.teavmlambda.db.api.JsonUtil;
 import io.teavmlambda.generated.GeneratedRouter;
 
 /**
@@ -21,9 +20,8 @@ public class Main {
         String dbUrl = Platform.env("DATABASE_URL", "postgresql://demo:demo@localhost:5432/demo");
 
         Database db = DatabaseFactory.create(dbUrl);
-        JsonUtil json = DatabaseFactory.jsonUtil();
 
-        UsersResource usersResource = new UsersResource(db, json);
+        UsersResource usersResource = new UsersResource(db);
         HealthResource healthResource = new HealthResource();
 
         Router router = new GeneratedRouter(healthResource, usersResource);

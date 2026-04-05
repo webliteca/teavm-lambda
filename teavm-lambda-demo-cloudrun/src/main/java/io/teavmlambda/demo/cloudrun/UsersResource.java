@@ -5,7 +5,7 @@ import io.teavmlambda.core.annotation.*;
 import io.teavmlambda.db.api.Database;
 import io.teavmlambda.db.api.DbResult;
 import io.teavmlambda.db.api.DbRow;
-import io.teavmlambda.db.api.JsonUtil;
+import io.teavmlambda.db.api.Json;
 
 @Path("/users")
 @ApiTag(value = "Users", description = "User management operations")
@@ -13,11 +13,9 @@ import io.teavmlambda.db.api.JsonUtil;
 public class UsersResource {
 
     private final Database db;
-    private final JsonUtil json;
 
-    public UsersResource(Database db, JsonUtil json) {
+    public UsersResource(Database db) {
         this.db = db;
-        this.json = json;
     }
 
     @GET
@@ -49,7 +47,7 @@ public class UsersResource {
     @ApiOperation(summary = "Create a new user", description = "Creates a user with the given name and email")
     @ApiResponse(code = 201, description = "User created")
     public Response createUser(@Body String body) {
-        DbRow parsed = json.parseJson(body);
+        DbRow parsed = Json.parse(body);
         String name = parsed.getString("name");
         String email = parsed.getString("email");
         DbResult result = db.query(

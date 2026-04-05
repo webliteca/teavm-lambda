@@ -1,7 +1,7 @@
 package io.teavmlambda.db.api;
 
 /**
- * SPI for creating platform-specific {@link Database} and {@link JsonUtil} instances.
+ * SPI for creating platform-specific {@link Database} instances.
  * <p>
  * Implementations are discovered via {@link java.util.ServiceLoader} or set
  * explicitly via {@link DatabaseFactory#setProvider(DatabaseProvider)}.
@@ -15,11 +15,4 @@ public interface DatabaseProvider {
      * @return a Database instance
      */
     Database create(String connectionUrl);
-
-    /**
-     * Creates a new JsonUtil instance for the current platform.
-     *
-     * @return a JsonUtil instance
-     */
-    JsonUtil jsonUtil();
 }
