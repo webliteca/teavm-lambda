@@ -124,17 +124,27 @@ async function runTests() {
     }
 
     // --- Compression / Quality ---
+    // Use a large noisy image so quality settings have a measurable effect.
+    // Solid-color images compress identically at all quality levels.
     console.log();
     console.log('--- Compression ---');
     {
-        const highQuality = await sharp(pngImage).jpeg({ quality: 95 }).toBuffer();
-        const lowQuality = await sharp(pngImage).jpeg({ quality: 10 }).toBuffer();
+        const channels = 3;
+        const w = 800, h = 600;
+        const pixels = Buffer.alloc(w * h * channels);
+        for (let i = 0; i < pixels.length; i++) {
+            pixels[i] = Math.floor(Math.random() * 256);
+        }
+        const noisyPng = await sharp(pixels, { raw: { width: w, height: h, channels } }).png().toBuffer();
+
+        const highQuality = await sharp(noisyPng).jpeg({ quality: 95 }).toBuffer();
+        const lowQuality = await sharp(noisyPng).jpeg({ quality: 10 }).toBuffer();
         assert('JPEG quality 95 produces valid JPEG', isJpeg(highQuality));
         assert('JPEG quality 10 produces valid JPEG', isJpeg(lowQuality));
         assert('Lower quality JPEG is smaller', lowQuality.length < highQuality.length);
 
-        const highWebp = await sharp(pngImage).webp({ quality: 95 }).toBuffer();
-        const lowWebp = await sharp(pngImage).webp({ quality: 10 }).toBuffer();
+        const highWebp = await sharp(noisyPng).webp({ quality: 95 }).toBuffer();
+        const lowWebp = await sharp(noisyPng).webp({ quality: 10 }).toBuffer();
         assert('WEBP quality 95 produces valid WEBP', isWebp(highWebp));
         assert('WEBP quality 10 produces valid WEBP', isWebp(lowWebp));
         assert('Lower quality WEBP is smaller', lowWebp.length < highWebp.length);
