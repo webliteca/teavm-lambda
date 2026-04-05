@@ -44,7 +44,7 @@ public class JdbcDatabase implements Database {
             Connection conn = getConnection();
             PreparedStatement stmt = conn.prepareStatement(jdbcSql);
             for (int i = 0; i < params.length; i++) {
-                stmt.setString(i + 1, params[i]);
+                setParam(stmt, i + 1, params[i]);
             }
 
             boolean hasResultSet = stmt.execute();
@@ -141,6 +141,31 @@ public class JdbcDatabase implements Database {
             }
         }
         return jdbc.toString();
+    }
+
+    /**
+     * Sets a parameter on a PreparedStatement, using the appropriate JDBC type.
+     * The Node.js pg driver auto-coerces string parameters to the column type,
+     * but JDBC is strict — passing a string for an integer column causes
+     * "operator does not exist: integer = character varying". This method
+     * detects numeric strings and uses setLong/setDouble instead of setString.
+     */
+    private static void setParam(PreparedStatement stmt, int index, String value) throws SQLException {
+        if (value == null) {
+            stmt.setNull(index, java.sql.Types.VARCHAR);
+        } else {
+            try {
+                long l = Long.parseLong(value);
+                stmt.setLong(index, l);
+            } catch (NumberFormatException e1) {
+                try {
+                    double d = Double.parseDouble(value);
+                    stmt.setDouble(index, d);
+                } catch (NumberFormatException e2) {
+                    stmt.setString(index, value);
+                }
+            }
+        }
     }
 
     /**
