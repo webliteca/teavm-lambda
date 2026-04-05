@@ -10,7 +10,7 @@ services:
   elasticmq:
     image: softwaremill/elasticmq-native:latest
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9324/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://localhost:9324/?Action=ListQueues' || exit 1"]
       interval: 2s
       timeout: 5s
       retries: 10
