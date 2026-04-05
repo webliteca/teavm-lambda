@@ -1,0 +1,9 @@
+{
+  "name": "teavm-lambda-demo-messagequeue",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.600.0",
+    "@google-cloud/pubsub": "^4.4.0"
+  }
+}

@@ -66,6 +66,18 @@
         <module>teavm-lambda-compression-jvm</module>
         <module>teavm-lambda-demo-features</module>
         <module>teavm-lambda-demo-features-lambda</module>
+        <module>teavm-lambda-objectstore</module>
+        <module>teavm-lambda-s3</module>
+        <module>teavm-lambda-s3-jvm</module>
+        <module>teavm-lambda-gcs</module>
+        <module>teavm-lambda-gcs-jvm</module>
+        <module>teavm-lambda-messagequeue</module>
+        <module>teavm-lambda-sqs</module>
+        <module>teavm-lambda-sqs-jvm</module>
+        <module>teavm-lambda-pubsub</module>
+        <module>teavm-lambda-pubsub-jvm</module>
+        <module>teavm-lambda-demo-objectstore</module>
+        <module>teavm-lambda-demo-messagequeue</module>
     </modules>
 
     <properties>
@@ -204,6 +216,56 @@
             <dependency>
                 <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-compression-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-objectstore</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-s3</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-s3-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-gcs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-gcs-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-messagequeue</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-sqs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-sqs-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-pubsub</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-pubsub-jvm</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

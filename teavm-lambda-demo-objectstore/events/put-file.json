@@ -1,0 +1,7 @@
+{
+  "httpMethod": "PUT",
+  "path": "/files/test.txt",
+  "headers": {"Content-Type": "application/octet-stream"},
+  "queryStringParameters": null,
+  "body": "Hello, World!"
+}

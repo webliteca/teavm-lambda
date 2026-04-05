@@ -1,0 +1,7 @@
+{
+  "httpMethod": "GET",
+  "path": "/files/test.txt",
+  "headers": {},
+  "queryStringParameters": null,
+  "body": null
+}

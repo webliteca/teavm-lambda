@@ -1,0 +1,7 @@
+{
+  "httpMethod": "POST",
+  "path": "/messages",
+  "headers": {"Content-Type": "application/json"},
+  "queryStringParameters": null,
+  "body": "{\"text\":\"Hello from integration test\"}"
+}

@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TeaVM Lambda Message Queue Demo - Test configuration (ElasticMQ)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  DemoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: teavm-lambda-demo-messagequeue/target/lambda/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          # ElasticMQ via compose service name
+          MESSAGEQUEUE_URI: sqs://elasticmq:9324
+          QUEUE_URL: http://elasticmq:9324/queue/demo-queue
+          # Required by AWS SDK when talking to ElasticMQ
+          AWS_ACCESS_KEY_ID: local
+          AWS_SECRET_ACCESS_KEY: local
+          AWS_DEFAULT_REGION: us-east-1
+      Events:
+        RootRequest:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        ProxyRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
