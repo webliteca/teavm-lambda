@@ -26,6 +26,7 @@ JS_MODULES=(
     teavm-lambda-adapter-lambda
     teavm-lambda-adapter-cloudrun
     teavm-lambda-db
+    teavm-lambda-image
 )
 
 # Known JVM implementation modules
@@ -34,6 +35,7 @@ JVM_MODULES=(
     teavm-lambda-adapter-lambda-jvm
     teavm-lambda-adapter-httpserver
     teavm-lambda-db-jvm
+    teavm-lambda-image-jvm
 )
 
 echo "=== SPI Platform Parity Check ==="
@@ -94,7 +96,7 @@ done
 # Also check for SPI interfaces defined in API modules that have NO implementations at all
 echo
 echo "--- Checking for unimplemented SPIs ---"
-for api_module in teavm-lambda-core teavm-lambda-db-api teavm-lambda-logging teavm-lambda-sentry; do
+for api_module in teavm-lambda-core teavm-lambda-db-api teavm-lambda-image-api teavm-lambda-logging teavm-lambda-sentry; do
     if [ ! -d "$api_module/src/main/java" ]; then continue; fi
     # Find interfaces that look like SPIs (end in Provider, Handler, Loader, Adapter)
     for java_file in $(find "$api_module/src/main/java" -name "*Provider.java" -o -name "*Handler.java" -o -name "*Loader.java" -o -name "*Adapter.java" 2>/dev/null); do
