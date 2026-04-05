@@ -180,7 +180,16 @@ public class RouteProcessor extends AbstractProcessor {
                 out.println("        + \"</body></html>\";");
                 out.println();
 
-                // Constructor taking resource instances
+                // Constructor taking a Container (DI)
+                out.println("    public GeneratedRouter(ca.weblite.teavmlambda.api.Container container) {");
+                for (ResourceClass resource : resources) {
+                    String fieldName = fieldNameFor(resource.simpleName);
+                    out.println("        this." + fieldName + " = container.get(" + resource.qualifiedName + ".class);");
+                }
+                out.println("    }");
+                out.println();
+
+                // Backwards-compatible constructor taking resource instances directly
                 out.print("    public GeneratedRouter(");
                 for (int i = 0; i < resources.size(); i++) {
                     ResourceClass resource = resources.get(i);

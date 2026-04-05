@@ -4,6 +4,8 @@ import ca.weblite.teavmlambda.api.Response;
 import ca.weblite.teavmlambda.api.annotation.*;
 
 @Path("/health")
+@Component
+@Singleton
 @ApiTag(value = "Health", description = "Health check endpoint")
 public class HealthResource {
 
