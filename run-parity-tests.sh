@@ -59,7 +59,7 @@ echo
 
 # --- Step 3: JVM Build + Test ---
 echo "=== Step 3: JVM Build ==="
-mvn clean package -pl teavm-lambda-demo -am -P jvm -q
+mvn clean package -pl teavm-lambda-demo -am -P jvm-server -q
 echo "Build complete."
 echo
 

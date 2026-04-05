@@ -77,8 +77,8 @@ jobs:
       - name: Start PostgreSQL
         run: docker compose -f docker-compose.jvm-test.yml up -d --wait
 
-      - name: Build JVM Lambda demo
-        run: mvn -B clean package -pl teavm-lambda-demo -am -P jvm
+      - name: Build JVM demo (standalone server)
+        run: mvn -B clean package -pl teavm-lambda-demo -am -P jvm-server
 
       - name: Start JVM server
         run: |
