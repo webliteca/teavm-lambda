@@ -1,427 +1,166 @@
 ```mermaid
-classDiagram
-    direction TB
+block-beta
+    columns 5
 
     %% ═══════════════════════════════════════════════════════════
-    %% USER APPLICATION LAYER (WORA - Write Once Run Anywhere)
+    %% LAYER 1: USER APPLICATION (WORA)
     %% ═══════════════════════════════════════════════════════════
 
-    namespace UserApplication {
-        class Main {
-            +main(String[] args)$
-        }
-        class UsersResource {
-            -Database db
-            +listUsers() Response
-            +getUser(String id) Response
-            +createUser(String body) Response
-            +deleteUser(String id) Response
-        }
-        class HealthResource {
-            +health() Response
-        }
-        class GeneratedRouter {
-            +route(Request) Response
-        }
-    }
+    block:UserApp:5
+        columns 3
+        space
+        AppLabel["USER APPLICATION (WORA)"]
+        space
+        Demo["teavm-lambda-demo\nteavm-lambda-demo-cloudrun\n\n• Main.java\n• UsersResource.java\n• HealthResource.java"]
+    end
+
+    space:5
 
     %% ═══════════════════════════════════════════════════════════
-    %% CORE API LAYER (Pure Java - no platform dependencies)
+    %% LAYER 2: PLATFORM-NEUTRAL API (Pure Java)
     %% ═══════════════════════════════════════════════════════════
 
-    namespace Core {
-        class Router {
-            <<interface>>
-            +route(Request) Response
-        }
-        class Request {
-            +getMethod() String
-            +getPath() String
-            +getHeaders() Map
-            +getQueryParams() Map
-            +getBody() String
-        }
-        class Response {
-            +ok(String)$ Response
-            +status(int)$ Response
-            +header(String, String) Response
-            +body(String) Response
-        }
-        class Platform {
-            +isAvailable()$ boolean
-            +env(String)$ String
-            +env(String, String)$ String
-            +start(Router)$
-        }
-        class PlatformAdapter {
-            <<interface>>
-            +env(String) String
-            +start(Router)
-        }
-        class ResourceLoader {
-            <<interface>>
-            +loadText(String) String
-        }
-        class Resources {
-            +isAvailable()$ boolean
-            +loadText(String)$ String
-        }
-    }
+    block:API:5
+        columns 5
+        space
+        ApiLabel["PLATFORM-NEUTRAL API (Pure Java — no platform deps)"]
+        space:3
+        Core["teavm-lambda-core\n\n• Router\n• Request / Response\n• Platform → PlatformAdapter\n• Resources → ResourceLoader\n• @Path @GET @POST ..."]
+        DbApi["teavm-lambda-db-api\n\n• Database → DatabaseProvider\n• DbResult / DbRow\n• Json → JsonProvider\n• DatabaseFactory"]
+        LogApi["teavm-lambda-logging\n\n• Logger → LogHandler"]
+        SentryApi["teavm-lambda-sentry\n\n• Sentry → SentryHandler"]
+        Processor["teavm-lambda-processor\n\n• RouteProcessor\n  (generates GeneratedRouter\n   at compile time)"]
+    end
 
-    namespace Logging {
-        class Logger {
-            +isAvailable()$ boolean
-            +info(String)
-            +warn(String)
-            +error(String)
-            +error(String, Throwable)
-        }
-        class LogHandler {
-            <<interface>>
-            +log(String level, String loggerName, String message, String contextJson)
-        }
-    }
-
-    namespace ErrorTracking {
-        class Sentry {
-            +isAvailable()$ boolean
-            +init(String dsn)$
-            +captureException(Throwable)$
-            +setTag(String, String)$
-            +addBreadcrumb(String, String)$
-        }
-        class SentryHandler {
-            <<interface>>
-            +init(String, String)
-            +captureError(String, String)
-            +setTag(String, String)
-        }
-    }
-
-    namespace CoreAnnotations {
-        class Path {
-            <<annotation>>
-        }
-        class GET {
-            <<annotation>>
-        }
-        class POST {
-            <<annotation>>
-        }
-        class PathParam {
-            <<annotation>>
-        }
-        class Body {
-            <<annotation>>
-        }
-    }
+    space:5
 
     %% ═══════════════════════════════════════════════════════════
-    %% DATABASE API LAYER (Pure Java interfaces)
+    %% LAYER 3: PLATFORM IMPLEMENTATIONS
     %% ═══════════════════════════════════════════════════════════
 
-    namespace DatabaseAPI {
-        class Database {
-            <<interface>>
-            +query(String) DbResult
-            +query(String, String...) DbResult
-            +close()
-        }
-        class DbResult {
-            <<interface>>
-            +getRows() List~DbRow~
-            +getRowCount() int
-            +toJsonArray() String
-        }
-        class DbRow {
-            <<interface>>
-            +getString(String) String
-            +getInt(String) int
-            +getDouble(String) double
-            +getBoolean(String) boolean
-            +has(String) boolean
-            +toJson() String
-        }
-        class DatabaseFactory {
-            +isAvailable()$ boolean
-            +create(String)$ Database
-        }
-        class DatabaseProvider {
-            <<interface>>
-            +create(String) Database
-        }
-        class Json {
-            +isAvailable()$ boolean
-            +parse(String)$ DbRow
-        }
-        class JsonProvider {
-            <<interface>>
-            +parse(String) DbRow
-        }
-    }
+    block:JsImpl:2
+        columns 1
+        JsLabel["NODE.JS / TeaVM"]
+        CoreJs["teavm-lambda-core-js\n\n• NodeResourceLoader\n• NodeLogHandler\n• NodeSentryHandler"]
+        AdapterLambda["teavm-lambda-adapter-lambda\n\n• LambdaPlatformAdapter\n• LambdaAdapter"]
+        AdapterCloudrun["teavm-lambda-adapter-cloudrun\n\n• CloudRunPlatformAdapter\n• CloudRunAdapter"]
+        DbJs["teavm-lambda-db\n\n• JsDatabaseProvider\n• JsDatabase / JsDbRow\n• JsJsonProvider"]
+    end
 
-    %% ═══════════════════════════════════════════════════════════
-    %% NODE.JS / TEAVM IMPLEMENTATIONS (left side)
-    %% ═══════════════════════════════════════════════════════════
+    block:ParityCheck:1
+        columns 1
+        ParityLabel["PARITY\nENFORCEMENT"]
+        SpiCheck["check-spi-parity.sh\n\nScans META-INF/services\nacross all modules.\nFails if any SPI lacks\nJS or JVM impl."]
+        TestParity["run-parity-tests.sh\n\nBuilds with -P teavm\nthen -P jvm.\nRuns same test.sh\nagainst both."]
+        IsAvail["isAvailable()\n\non Platform,\nDatabaseFactory,\nJson, Logger, Sentry"]
+    end
 
-    namespace NodeJS_Lambda {
-        class LambdaPlatformAdapter {
-            +env(String) String
-            +start(Router)
-        }
-        class LambdaAdapter {
-            +start(Router)$
-        }
-    }
-
-    namespace NodeJS_CloudRun {
-        class CloudRunPlatformAdapter {
-            +env(String) String
-            +start(Router)
-        }
-        class CloudRunAdapter {
-            +start(Router)$
-        }
-    }
-
-    namespace NodeJS_DB {
-        class JsDatabaseProvider {
-            +create(String) Database
-        }
-        class JsDatabase {
-            +query(String) DbResult
-            +query(String, String...) DbResult
-        }
-        class JsDbResult {
-            +getRows() List~DbRow~
-            +getRowCount() int
-        }
-        class JsDbRow {
-            +getString(String) String
-            +toJson() String
-        }
-        class JsJsonProvider {
-            +parse(String) DbRow
-        }
-    }
-
-    namespace NodeJS_Core {
-        class NodeResourceLoader {
-            +loadText(String) String
-            +install()$
-        }
-        class NodeLogHandler {
-            +log(String, String, String, String)
-        }
-        class NodeSentryHandler {
-            +init(String, String)
-            +captureError(String, String)
-        }
-    }
-
-    %% ═══════════════════════════════════════════════════════════
-    %% JVM IMPLEMENTATIONS (right side)
-    %% ═══════════════════════════════════════════════════════════
-
-    namespace JVM_Lambda {
-        class LambdaJvmPlatformAdapter {
-            +env(String) String
-            +start(Router)
-        }
-        class JvmLambdaAdapter {
-            +handleRequest(APIGatewayProxyRequestEvent, Context)
-        }
-    }
-
-    namespace JVM_HttpServer {
-        class HttpServerPlatformAdapter {
-            +env(String) String
-            +start(Router)
-        }
-        class HttpServerAdapter {
-            +start(Router)$
-            +start(Router, int)$
-        }
-    }
-
-    namespace JVM_DB {
-        class JdbcDatabaseProvider {
-            +create(String) Database
-        }
-        class JdbcDatabase {
-            +query(String) DbResult
-            +query(String, String...) DbResult
-        }
-        class JdbcDbResult {
-            +getRows() List~DbRow~
-            +getRowCount() int
-        }
-        class JdbcDbRow {
-            +getString(String) String
-            +toJson() String
-        }
-        class JvmJsonUtil {
-            +parse(String) DbRow
-        }
-    }
-
-    %% ═══════════════════════════════════════════════════════════
-    %% JVM CROSS-CUTTING (core-jvm)
-
-    namespace JVM_Core {
-        class JvmLogHandler {
-            +log(String, String, String, String)
-        }
-        class NoOpSentryHandler {
-            +init(String, String)
-            +captureError(String, String)
-        }
-    }
-
-    %% COMPILE-TIME
-    %% ═══════════════════════════════════════════════════════════
-
-    namespace CompileTime {
-        class RouteProcessor {
-            <<annotation processor>>
-            +process(Set, RoundEnvironment) boolean
-        }
-    }
+    block:JvmImpl:2
+        columns 1
+        JvmLabel["JVM"]
+        CoreJvm["teavm-lambda-core-jvm\n\n• JvmLogHandler\n• NoOpSentryHandler"]
+        AdapterLambdaJvm["teavm-lambda-adapter-lambda-jvm\n\n• LambdaJvmPlatformAdapter\n• JvmLambdaAdapter"]
+        AdapterHttp["teavm-lambda-adapter-httpserver\n\n• HttpServerPlatformAdapter\n• HttpServerAdapter"]
+        DbJvm["teavm-lambda-db-jvm\n\n• JdbcDatabaseProvider\n• JdbcDatabase / JdbcDbRow\n• JvmJsonUtil"]
+    end
 
     %% ═══════════════════════════════════════════════════════════
     %% RELATIONSHIPS
     %% ═══════════════════════════════════════════════════════════
 
-    %% User app -> Core API
-    Main --> Platform : env(), start()
-    Main --> DatabaseFactory : create()
-    Main --> GeneratedRouter : creates
-    UsersResource --> Database : query()
-    UsersResource --> DbResult
-    UsersResource --> DbRow
-    UsersResource --> Json : parse()
-    GeneratedRouter ..|> Router
+    Demo --> Core
+    Demo --> DbApi
+    Core --> LogApi
+    Core --> SentryApi
 
-    %% Core internals
-    Platform --> PlatformAdapter : delegates via ServiceLoader
-    Resources --> ResourceLoader : delegates via ServiceLoader
-    DatabaseFactory --> DatabaseProvider : delegates via ServiceLoader
-    Json --> JsonProvider : delegates via ServiceLoader
-    Logger --> LogHandler : delegates via ServiceLoader
-    Sentry --> SentryHandler : delegates via ServiceLoader
-    Database --> DbResult : returns
-    DbResult --> DbRow : contains
+    CoreJs --> Core
+    CoreJs --> LogApi
+    CoreJs --> SentryApi
+    AdapterLambda --> CoreJs
+    AdapterCloudrun --> CoreJs
+    DbJs --> DbApi
 
-    %% Annotation processor
-    RouteProcessor ..> GeneratedRouter : generates at compile time
-    RouteProcessor ..> Path : reads
-    RouteProcessor ..> GET : reads
+    CoreJvm --> LogApi
+    CoreJvm --> SentryApi
+    AdapterLambdaJvm --> Core
+    AdapterHttp --> Core
+    DbJvm --> DbApi
 
-    %% Node.js implementations
-    LambdaPlatformAdapter ..|> PlatformAdapter
-    LambdaPlatformAdapter --> LambdaAdapter
-    CloudRunPlatformAdapter ..|> PlatformAdapter
-    CloudRunPlatformAdapter --> CloudRunAdapter
-    JsDatabaseProvider ..|> DatabaseProvider
-    JsDatabaseProvider --> JsDatabase
-    JsDatabase ..|> Database
-    JsDbResult ..|> DbResult
-    JsDbRow ..|> DbRow
-    JsJsonProvider ..|> JsonProvider
-    NodeResourceLoader ..|> ResourceLoader
-    NodeLogHandler ..|> LogHandler
-    NodeSentryHandler ..|> SentryHandler
-
-    %% JVM implementations
-    LambdaJvmPlatformAdapter ..|> PlatformAdapter
-    LambdaJvmPlatformAdapter --> JvmLambdaAdapter
-    HttpServerPlatformAdapter ..|> PlatformAdapter
-    HttpServerPlatformAdapter --> HttpServerAdapter
-    JdbcDatabaseProvider ..|> DatabaseProvider
-    JdbcDatabaseProvider --> JdbcDatabase
-    JdbcDatabase ..|> Database
-    JdbcDbResult ..|> DbResult
-    JdbcDbRow ..|> DbRow
-    JvmJsonUtil ..|> JsonProvider
-    JvmLogHandler ..|> LogHandler
-    NoOpSentryHandler ..|> SentryHandler
+    Processor --> Core
 
     %% ═══════════════════════════════════════════════════════════
     %% STYLING
     %% ═══════════════════════════════════════════════════════════
 
-    style Main fill:#e8f5e9,stroke:#2e7d32
-    style UsersResource fill:#e8f5e9,stroke:#2e7d32
-    style HealthResource fill:#e8f5e9,stroke:#2e7d32
-    style GeneratedRouter fill:#e8f5e9,stroke:#2e7d32
+    style UserApp fill:#e8f5e9,stroke:#2e7d32
+    style Demo fill:#e8f5e9,stroke:#2e7d32
+    style AppLabel fill:#e8f5e9,stroke:#e8f5e9,color:#2e7d32
 
-    style Router fill:#e3f2fd,stroke:#1565c0
-    style Request fill:#e3f2fd,stroke:#1565c0
-    style Response fill:#e3f2fd,stroke:#1565c0
-    style Platform fill:#e3f2fd,stroke:#1565c0
-    style PlatformAdapter fill:#e3f2fd,stroke:#1565c0
-    style ResourceLoader fill:#e3f2fd,stroke:#1565c0
-    style Resources fill:#e3f2fd,stroke:#1565c0
-    style Path fill:#e3f2fd,stroke:#1565c0
-    style GET fill:#e3f2fd,stroke:#1565c0
-    style POST fill:#e3f2fd,stroke:#1565c0
-    style PathParam fill:#e3f2fd,stroke:#1565c0
-    style Body fill:#e3f2fd,stroke:#1565c0
+    style API fill:#e3f2fd,stroke:#1565c0
+    style Core fill:#e3f2fd,stroke:#1565c0
+    style DbApi fill:#e3f2fd,stroke:#1565c0
+    style LogApi fill:#e3f2fd,stroke:#1565c0
+    style SentryApi fill:#e3f2fd,stroke:#1565c0
+    style Processor fill:#fffde7,stroke:#f57f17
+    style ApiLabel fill:#e3f2fd,stroke:#e3f2fd,color:#1565c0
 
-    style Logger fill:#e3f2fd,stroke:#1565c0
-    style LogHandler fill:#e3f2fd,stroke:#1565c0
-    style Sentry fill:#e3f2fd,stroke:#1565c0
-    style SentryHandler fill:#e3f2fd,stroke:#1565c0
+    style JsImpl fill:#fce4ec,stroke:#c62828
+    style CoreJs fill:#fce4ec,stroke:#c62828
+    style AdapterLambda fill:#fce4ec,stroke:#c62828
+    style AdapterCloudrun fill:#fce4ec,stroke:#c62828
+    style DbJs fill:#fce4ec,stroke:#c62828
+    style JsLabel fill:#fce4ec,stroke:#fce4ec,color:#c62828
 
-    style Database fill:#fff3e0,stroke:#e65100
-    style DbResult fill:#fff3e0,stroke:#e65100
-    style DbRow fill:#fff3e0,stroke:#e65100
-    style DatabaseFactory fill:#fff3e0,stroke:#e65100
-    style DatabaseProvider fill:#fff3e0,stroke:#e65100
-    style Json fill:#fff3e0,stroke:#e65100
-    style JsonProvider fill:#fff3e0,stroke:#e65100
+    style JvmImpl fill:#f3e5f5,stroke:#6a1b9a
+    style CoreJvm fill:#f3e5f5,stroke:#6a1b9a
+    style AdapterLambdaJvm fill:#f3e5f5,stroke:#6a1b9a
+    style AdapterHttp fill:#f3e5f5,stroke:#6a1b9a
+    style DbJvm fill:#f3e5f5,stroke:#6a1b9a
+    style JvmLabel fill:#f3e5f5,stroke:#f3e5f5,color:#6a1b9a
 
-    style LambdaPlatformAdapter fill:#fce4ec,stroke:#c62828
-    style LambdaAdapter fill:#fce4ec,stroke:#c62828
-    style CloudRunPlatformAdapter fill:#fce4ec,stroke:#c62828
-    style CloudRunAdapter fill:#fce4ec,stroke:#c62828
-    style JsDatabaseProvider fill:#fce4ec,stroke:#c62828
-    style JsDatabase fill:#fce4ec,stroke:#c62828
-    style JsDbResult fill:#fce4ec,stroke:#c62828
-    style JsDbRow fill:#fce4ec,stroke:#c62828
-    style JsJsonProvider fill:#fce4ec,stroke:#c62828
-    style NodeResourceLoader fill:#fce4ec,stroke:#c62828
-    style NodeLogHandler fill:#fce4ec,stroke:#c62828
-    style NodeSentryHandler fill:#fce4ec,stroke:#c62828
-
-    style LambdaJvmPlatformAdapter fill:#f3e5f5,stroke:#6a1b9a
-    style JvmLambdaAdapter fill:#f3e5f5,stroke:#6a1b9a
-    style HttpServerPlatformAdapter fill:#f3e5f5,stroke:#6a1b9a
-    style HttpServerAdapter fill:#f3e5f5,stroke:#6a1b9a
-    style JdbcDatabaseProvider fill:#f3e5f5,stroke:#6a1b9a
-    style JdbcDatabase fill:#f3e5f5,stroke:#6a1b9a
-    style JdbcDbResult fill:#f3e5f5,stroke:#6a1b9a
-    style JdbcDbRow fill:#f3e5f5,stroke:#6a1b9a
-    style JvmJsonUtil fill:#f3e5f5,stroke:#6a1b9a
-    style JvmLogHandler fill:#f3e5f5,stroke:#6a1b9a
-    style NoOpSentryHandler fill:#f3e5f5,stroke:#6a1b9a
-
-    style RouteProcessor fill:#fffde7,stroke:#f57f17
+    style ParityCheck fill:#fff8e1,stroke:#ff8f00
+    style SpiCheck fill:#fff8e1,stroke:#ff8f00
+    style TestParity fill:#fff8e1,stroke:#ff8f00
+    style IsAvail fill:#fff8e1,stroke:#ff8f00
+    style ParityLabel fill:#fff8e1,stroke:#fff8e1,color:#ff8f00
 ```
 
-**Legend:**
-- Green: User application code (WORA)
-- Blue: Core API layer (pure Java, no platform deps)
-- Orange: Database API layer (pure Java interfaces)
-- Red: Node.js/TeaVM implementations
-- Purple: JVM implementations
-- Yellow: Compile-time annotation processor
+## Module-to-Layer Mapping
 
-**Key architectural points:**
-- User code (green) only depends on interfaces (blue + orange) — never on implementations
-- Six SPIs with ServiceLoader discovery: `Platform`, `DatabaseFactory`, `Json`, `Resources`, `Logger`, `Sentry`
-- Every factory has `isAvailable()` for graceful feature detection at runtime
-- Swapping platform = swapping Maven dependencies (red vs purple), zero code changes
-- `check-spi-parity.sh` validates that every SPI has both JS and JVM implementations
-- `run-parity-tests.sh` runs the same integration tests against both platform builds
-- The annotation processor (yellow) generates `GeneratedRouter` at compile time from `@Path`/`@GET`/etc.
+| Layer | Maven Module | Contents | Platform |
+|-------|-------------|----------|----------|
+| **User App** | `teavm-lambda-demo` | Main, UsersResource, HealthResource | WORA |
+| **User App** | `teavm-lambda-demo-cloudrun` | Main, UsersResource, HealthResource | WORA |
+| | | | |
+| **API** | `teavm-lambda-core` | Router, Request, Response, Platform, Resources, annotations | Pure Java |
+| **API** | `teavm-lambda-db-api` | Database, DbResult, DbRow, Json, DatabaseFactory | Pure Java |
+| **API** | `teavm-lambda-logging` | Logger, LogHandler | Pure Java |
+| **API** | `teavm-lambda-sentry` | Sentry, SentryHandler | Pure Java |
+| **API** | `teavm-lambda-processor` | RouteProcessor (compile-time codegen) | Pure Java |
+| | | | |
+| **JS Impl** | `teavm-lambda-core-js` | NodeResourceLoader, NodeLogHandler, NodeSentryHandler | Node.js |
+| **JS Impl** | `teavm-lambda-adapter-lambda` | LambdaPlatformAdapter, LambdaAdapter | Node.js |
+| **JS Impl** | `teavm-lambda-adapter-cloudrun` | CloudRunPlatformAdapter, CloudRunAdapter | Node.js |
+| **JS Impl** | `teavm-lambda-db` | JsDatabaseProvider, JsDatabase, JsJsonProvider | Node.js |
+| | | | |
+| **JVM Impl** | `teavm-lambda-core-jvm` | JvmLogHandler, NoOpSentryHandler | JVM |
+| **JVM Impl** | `teavm-lambda-adapter-lambda-jvm` | LambdaJvmPlatformAdapter, JvmLambdaAdapter | JVM |
+| **JVM Impl** | `teavm-lambda-adapter-httpserver` | HttpServerPlatformAdapter, HttpServerAdapter | JVM |
+| **JVM Impl** | `teavm-lambda-db-jvm` | JdbcDatabaseProvider, JdbcDatabase, JvmJsonUtil | JVM |
+| | | | |
+| **Parity** | `check-spi-parity.sh` | Validates every SPI has both JS + JVM in META-INF/services | Build-time |
+| **Parity** | `run-parity-tests.sh` | Runs same tests against both `-P teavm` and `-P jvm` builds | Test-time |
+| **Parity** | `isAvailable()` on every factory | Runtime feature detection | Runtime |
+
+## SPI Symmetry
+
+Each concern follows the same pattern — API module defines interface + factory, impl modules register via `META-INF/services`:
+
+| Concern | API Module | Factory | SPI Interface | JS Module | JVM Module |
+|---------|-----------|---------|---------------|-----------|------------|
+| Server | core | `Platform` | `PlatformAdapter` | adapter-lambda / adapter-cloudrun | adapter-lambda-jvm / adapter-httpserver |
+| Database | db-api | `DatabaseFactory` | `DatabaseProvider` | db | db-jvm |
+| JSON | db-api | `Json` | `JsonProvider` | db | db-jvm |
+| Resources | core | `Resources` | `ResourceLoader` | core-js | (built-in fallback) |
+| Logging | logging | `Logger` | `LogHandler` | core-js | core-jvm |
+| Error tracking | sentry | `Sentry` | `SentryHandler` | core-js | core-jvm |
