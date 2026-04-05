@@ -63,6 +63,10 @@ mvn clean package -pl teavm-lambda-demo -am -P jvm -q
 echo "Build complete."
 echo
 
+echo "Starting PostgreSQL with host port..."
+docker compose -f docker-compose.test.yml down -v 2>/dev/null || true
+docker compose -f docker-compose.jvm-test.yml up -d --wait
+
 echo "Starting JVM server..."
 DATABASE_URL=postgresql://demo:demo@localhost:5432/demo \
     java -jar teavm-lambda-demo/target/teavm-lambda-demo-0.1.0-SNAPSHOT.jar &
@@ -76,7 +80,7 @@ kill $JVM_PID 2>/dev/null || true
 echo
 
 # --- Cleanup ---
-docker compose -f docker-compose.test.yml down -v 2>/dev/null || true
+docker compose -f docker-compose.jvm-test.yml down -v 2>/dev/null || true
 
 # --- Results ---
 echo "============================================"

@@ -64,22 +64,6 @@ jobs:
   test-lambda-jvm:
     needs: build
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: demo
-          POSTGRES_USER: demo
-          POSTGRES_PASSWORD: demo
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U demo"
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 10
-        volumes:
-          - ${{ github.workspace }}/teavm-lambda-demo/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     steps:
       - uses: actions/checkout@v4
 
@@ -89,6 +73,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Start PostgreSQL
+        run: docker compose -f docker-compose.jvm-test.yml up -d --wait
 
       - name: Build JVM Lambda demo
         run: mvn -B clean package -pl teavm-lambda-demo -am -P jvm

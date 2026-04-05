@@ -1,0 +1,23 @@
+# PostgreSQL for JVM integration tests.
+# Exposes port 5432 on the host so the JVM app (running outside Docker) can connect.
+#
+# Usage:
+#   docker compose -f docker-compose.jvm-test.yml up -d --wait
+#   DATABASE_URL=postgresql://demo:demo@localhost:5432/demo java -jar app.jar
+#
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./teavm-lambda-demo/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
