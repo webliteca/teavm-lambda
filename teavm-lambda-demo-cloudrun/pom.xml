@@ -204,7 +204,7 @@
             <dependencies>
                 <dependency>
                     <groupId>ca.weblite</groupId>
-                    <artifactId>teavm-lambda-adapter-cloudrun-jvm</artifactId>
+                    <artifactId>teavm-lambda-adapter-httpserver</artifactId>
                 </dependency>
                 <dependency>
                     <groupId>ca.weblite</groupId>

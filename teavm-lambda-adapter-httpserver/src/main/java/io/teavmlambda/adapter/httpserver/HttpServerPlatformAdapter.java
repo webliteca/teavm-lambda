@@ -1,13 +1,14 @@
-package io.teavmlambda.adapter.cloudrun.jvm;
+package io.teavmlambda.adapter.httpserver;
 
 import io.teavmlambda.core.PlatformAdapter;
 import io.teavmlambda.core.Router;
 
 /**
- * PlatformAdapter for Cloud Run / standalone HTTP server on JVM.
+ * PlatformAdapter backed by JDK's built-in HTTP server.
+ * Works anywhere a JVM runs: Cloud Run, Docker, bare metal, local dev.
  * Discovered via ServiceLoader or installed explicitly.
  */
-public class CloudRunJvmPlatformAdapter implements PlatformAdapter {
+public class HttpServerPlatformAdapter implements PlatformAdapter {
 
     @Override
     public String env(String name) {
@@ -17,6 +18,6 @@ public class CloudRunJvmPlatformAdapter implements PlatformAdapter {
 
     @Override
     public void start(Router router) {
-        JvmCloudRunAdapter.start(router);
+        HttpServerAdapter.start(router);
     }
 }

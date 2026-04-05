@@ -1,4 +1,4 @@
-package io.teavmlambda.adapter.cloudrun.jvm;
+package io.teavmlambda.adapter.httpserver;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -20,15 +20,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Cloud Run / standalone HTTP server adapter for JVM deployment.
+ * Embedded HTTP server adapter for JVM deployment.
  * <p>
- * Uses the JDK built-in {@link com.sun.net.httpserver.HttpServer} (zero external dependencies).
- * Serves static files from a {@code public/} directory if it exists, then falls through
- * to the Java router for API requests.
+ * Uses the JDK built-in {@link com.sun.net.httpserver.HttpServer} with zero external
+ * dependencies. Works anywhere: Cloud Run, Docker, bare metal, local dev.
+ * Serves static files from a {@code public/} directory if it exists, then falls
+ * through to the Java router for API requests.
  */
-public final class JvmCloudRunAdapter {
+public final class HttpServerAdapter {
 
-    private static final Logger logger = Logger.getLogger(JvmCloudRunAdapter.class.getName());
+    private static final Logger logger = Logger.getLogger(HttpServerAdapter.class.getName());
 
     private static final Map<String, String> MIME_TYPES = Map.ofEntries(
             Map.entry(".html", "text/html"),
@@ -50,7 +51,7 @@ public final class JvmCloudRunAdapter {
             Map.entry(".map", "application/json")
     );
 
-    private JvmCloudRunAdapter() {
+    private HttpServerAdapter() {
     }
 
     /**
@@ -86,7 +87,7 @@ public final class JvmCloudRunAdapter {
                 }
             });
             server.start();
-            logger.info("Cloud Run server listening on port " + port);
+            logger.info("HTTP server listening on port " + port);
         } catch (IOException e) {
             throw new RuntimeException("Failed to start HTTP server", e);
         }

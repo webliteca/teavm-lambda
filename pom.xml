@@ -43,7 +43,7 @@
         <module>teavm-lambda-adapter-lambda</module>
         <module>teavm-lambda-adapter-lambda-jvm</module>
         <module>teavm-lambda-adapter-cloudrun</module>
-        <module>teavm-lambda-adapter-cloudrun-jvm</module>
+        <module>teavm-lambda-adapter-httpserver</module>
         <module>teavm-lambda-db-api</module>
         <module>teavm-lambda-db</module>
         <module>teavm-lambda-db-jvm</module>
@@ -112,7 +112,7 @@
             </dependency>
             <dependency>
                 <groupId>ca.weblite</groupId>
-                <artifactId>teavm-lambda-adapter-cloudrun-jvm</artifactId>
+                <artifactId>teavm-lambda-adapter-httpserver</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
