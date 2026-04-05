@@ -98,7 +98,7 @@
                                     <goal>compile</goal>
                                 </goals>
                                 <configuration>
-                                    <mainClass>io.teavmlambda.demo.Main</mainClass>
+                                    <mainClass>ca.weblite.teavmlambda.demo.Main</mainClass>
                                     <targetType>JAVASCRIPT</targetType>
                                     <targetDirectory>${project.build.directory}/lambda</targetDirectory>
                                     <targetFileName>teavm-app.js</targetFileName>
@@ -254,7 +254,7 @@
                                 <configuration>
                                     <transformers>
                                         <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                            <mainClass>io.teavmlambda.demo.Main</mainClass>
+                                            <mainClass>ca.weblite.teavmlambda.demo.Main</mainClass>
                                         </transformer>
                                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                     </transformers>

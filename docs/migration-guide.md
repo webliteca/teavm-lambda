@@ -28,10 +28,10 @@ JS-specific types with their platform-neutral counterparts.
 
 | Before (JS-specific) | After (platform-neutral) |
 |---|---|
-| `import io.teavmlambda.db.Db;` | `import io.teavmlambda.db.api.Database;` |
-| `import io.teavmlambda.db.PgResult;` | `import io.teavmlambda.db.api.DbResult;` |
-| `import io.teavmlambda.db.JsUtil;` | `import io.teavmlambda.db.api.Json;` |
-| `import org.teavm.jso.JSObject;` | `import io.teavmlambda.db.api.DbRow;` |
+| `import io.teavmlambda.db.Db;` | `import ca.weblite.teavmlambda.api.db.Database;` |
+| `import io.teavmlambda.db.PgResult;` | `import ca.weblite.teavmlambda.api.db.DbResult;` |
+| `import io.teavmlambda.db.JsUtil;` | `import ca.weblite.teavmlambda.api.db.Json;` |
+| `import org.teavm.jso.JSObject;` | `import ca.weblite.teavmlambda.api.db.DbRow;` |
 | `import org.teavm.jso.core.JSArray;` | *(remove — not needed)* |
 
 ### Type replacements
@@ -111,8 +111,8 @@ String email = parsed.getString("email");
 
 Before:
 ```java
-import io.teavmlambda.core.Response;
-import io.teavmlambda.core.annotation.*;
+import ca.weblite.teavmlambda.api.Response;
+import ca.weblite.teavmlambda.api.annotation.*;
 import io.teavmlambda.db.Db;
 import io.teavmlambda.db.JsUtil;
 import io.teavmlambda.db.PgResult;
@@ -154,12 +154,12 @@ public class UsersResource {
 
 After:
 ```java
-import io.teavmlambda.core.Response;
-import io.teavmlambda.core.annotation.*;
-import io.teavmlambda.db.api.Database;
-import io.teavmlambda.db.api.DbResult;
-import io.teavmlambda.db.api.DbRow;
-import io.teavmlambda.db.api.Json;
+import ca.weblite.teavmlambda.api.Response;
+import ca.weblite.teavmlambda.api.annotation.*;
+import ca.weblite.teavmlambda.api.db.Database;
+import ca.weblite.teavmlambda.api.db.DbResult;
+import ca.weblite.teavmlambda.api.db.DbRow;
+import ca.weblite.teavmlambda.api.db.Json;
 
 @Path("/users")
 public class UsersResource {
@@ -213,7 +213,7 @@ if (dbUrl == null || dbUrl.isEmpty()) {
 
 After:
 ```java
-import io.teavmlambda.core.Platform;
+import ca.weblite.teavmlambda.api.Platform;
 
 // usage:
 String dbUrl = Platform.env("DATABASE_URL", "postgresql://demo:demo@localhost:5432/demo");
@@ -232,8 +232,8 @@ Db db = new Db(pool);
 
 After:
 ```java
-import io.teavmlambda.db.api.Database;
-import io.teavmlambda.db.api.DatabaseFactory;
+import ca.weblite.teavmlambda.api.db.Database;
+import ca.weblite.teavmlambda.api.db.DatabaseFactory;
 
 Database db = DatabaseFactory.create(dbUrl);
 ```
@@ -253,7 +253,7 @@ CloudRunAdapter.start(router);
 
 After:
 ```java
-import io.teavmlambda.core.Platform;
+import ca.weblite.teavmlambda.api.Platform;
 Platform.start(router);
 ```
 
@@ -262,10 +262,10 @@ Platform.start(router);
 Before:
 ```java
 import io.teavmlambda.adapter.lambda.LambdaAdapter;
-import io.teavmlambda.core.Router;
+import ca.weblite.teavmlambda.api.Router;
 import io.teavmlambda.db.Db;
 import io.teavmlambda.db.PgPool;
-import io.teavmlambda.generated.GeneratedRouter;
+import ca.weblite.teavmlambda.generated.GeneratedRouter;
 import org.teavm.jso.JSBody;
 
 public class Main {
@@ -289,11 +289,11 @@ public class Main {
 
 After:
 ```java
-import io.teavmlambda.core.Platform;
-import io.teavmlambda.core.Router;
-import io.teavmlambda.db.api.Database;
-import io.teavmlambda.db.api.DatabaseFactory;
-import io.teavmlambda.generated.GeneratedRouter;
+import ca.weblite.teavmlambda.api.Platform;
+import ca.weblite.teavmlambda.api.Router;
+import ca.weblite.teavmlambda.api.db.Database;
+import ca.weblite.teavmlambda.api.db.DatabaseFactory;
+import ca.weblite.teavmlambda.generated.GeneratedRouter;
 
 public class Main {
     public static void main(String[] args) {
@@ -510,7 +510,7 @@ These are **JS-only** — avoid in application code:
 | Do not use | Use instead |
 |---|---|
 | `@JSBody` | `Platform.env()` |
-| `org.teavm.jso.*` | `io.teavmlambda.db.api.*` |
+| `org.teavm.jso.*` | `ca.weblite.teavmlambda.api.db.*` |
 | `Db` / `PgPool` | `DatabaseFactory.create()` |
 | `PgResult` | `DbResult` |
 | `JSObject` / `JSArray` | `DbRow` / `List<DbRow>` |

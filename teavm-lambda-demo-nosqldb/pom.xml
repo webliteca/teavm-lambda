@@ -89,7 +89,7 @@
                             <goal>compile</goal>
                         </goals>
                         <configuration>
-                            <mainClass>io.teavmlambda.demo.nosqldb.Main</mainClass>
+                            <mainClass>ca.weblite.teavmlambda.demo.nosqldb.Main</mainClass>
                             <targetType>JAVASCRIPT</targetType>
                             <targetDirectory>${project.build.directory}/lambda</targetDirectory>
                             <targetFileName>teavm-app.js</targetFileName>
