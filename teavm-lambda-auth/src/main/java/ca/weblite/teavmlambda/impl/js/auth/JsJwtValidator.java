@@ -57,8 +57,8 @@ public class JsJwtValidator implements JwtValidator {
     private JwtClaims parseClaims(String json) throws JwtValidationException {
         String sub = extractJsonString(json, "sub");
         String iss = extractJsonString(json, "iss");
-        long exp = extractJsonLong(json, "exp");
-        long iat = extractJsonLong(json, "iat");
+        long exp = (long) extractJsonDouble(json, "exp");
+        long iat = (long) extractJsonDouble(json, "iat");
 
         // Check expiration
         long nowSeconds = System.currentTimeMillis() / 1000;
@@ -132,7 +132,7 @@ public class JsJwtValidator implements JwtValidator {
     @JSBody(params = {"json", "key"}, script = ""
             + "try { var obj = JSON.parse(json); return obj[key] != null ? Number(obj[key]) : 0; }"
             + "catch(e) { return 0; }")
-    private static native long extractJsonLong(String json, String key);
+    private static native double extractJsonDouble(String json, String key);
 
     @JSBody(params = {"json", "key"}, script = ""
             + "try {"
