@@ -58,4 +58,21 @@ public class GoogleGcsObjectStoreClient implements ObjectStoreClient {
         Blob blob = storage.get(BlobId.of(bucket, key));
         return blob != null && blob.exists();
     }
+
+    @Override
+    public void putObjectBytes(String bucket, String key, byte[] data, String contentType) {
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucket, key))
+                .setContentType(contentType)
+                .build();
+        storage.create(blobInfo, data);
+    }
+
+    @Override
+    public byte[] getObjectBytes(String bucket, String key) {
+        Blob blob = storage.get(BlobId.of(bucket, key));
+        if (blob == null || !blob.exists()) {
+            return null;
+        }
+        return blob.getContent();
+    }
 }

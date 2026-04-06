@@ -62,4 +62,25 @@ public class GcsObjectStoreClient implements ObjectStoreClient {
                 GcsJsBridge.objectExists(storage, bucket, key));
         return GcsJsBridge.getBooleanProperty(result, "exists");
     }
+
+    @Override
+    public void putObjectBytes(String bucket, String key, byte[] data, String contentType) {
+        JSObject buffer = GcsJsBridge.toNodeBuffer(data);
+        GcsAsyncBridge.awaitVoid(
+                GcsJsBridge.putObjectBytes(storage, bucket, key, buffer, contentType));
+    }
+
+    @Override
+    public byte[] getObjectBytes(String bucket, String key) {
+        try {
+            JSObject result = GcsAsyncBridge.await(
+                    GcsJsBridge.getObjectBytes(storage, bucket, key));
+            return GcsJsBridge.fromNodeBuffer(result);
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("No such object")) {
+                return null;
+            }
+            throw e;
+        }
+    }
 }

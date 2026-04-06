@@ -81,4 +81,29 @@ public class AwsS3ObjectStoreClient implements ObjectStoreClient {
             return false;
         }
     }
+
+    @Override
+    public void putObjectBytes(String bucket, String key, byte[] data, String contentType) {
+        s3.putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(key)
+                        .contentType(contentType)
+                        .build(),
+                RequestBody.fromBytes(data));
+    }
+
+    @Override
+    public byte[] getObjectBytes(String bucket, String key) {
+        try {
+            ResponseBytes<GetObjectResponse> response = s3.getObjectAsBytes(
+                    GetObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .build());
+            return response.asByteArray();
+        } catch (NoSuchKeyException e) {
+            return null;
+        }
+    }
 }

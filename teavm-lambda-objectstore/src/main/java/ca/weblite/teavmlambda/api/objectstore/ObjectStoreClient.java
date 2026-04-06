@@ -54,4 +54,23 @@ public interface ObjectStoreClient {
      * @return true if the object exists
      */
     boolean objectExists(String bucket, String key);
+
+    /**
+     * Uploads binary data to the store.
+     *
+     * @param bucket      the bucket name
+     * @param key         the object key
+     * @param data        the binary content
+     * @param contentType the MIME type (e.g. "image/jpeg")
+     */
+    void putObjectBytes(String bucket, String key, byte[] data, String contentType);
+
+    /**
+     * Downloads binary data from the store.
+     *
+     * @param bucket the bucket name
+     * @param key    the object key
+     * @return the binary content, or null if not found
+     */
+    byte[] getObjectBytes(String bucket, String key);
 }
