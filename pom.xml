@@ -79,6 +79,7 @@
         <module>teavm-lambda-pubsub-jvm</module>
         <module>teavm-lambda-demo-objectstore</module>
         <module>teavm-lambda-demo-messagequeue</module>
+        <module>teavm-lambda-kotlin</module>
     </modules>
 
     <properties>
