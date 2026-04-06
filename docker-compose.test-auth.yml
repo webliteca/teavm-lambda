@@ -1,0 +1,21 @@
+# Isolated test environment for auth demo. PostgreSQL runs in Docker with no host port exposure.
+# SAM local invoke sends test events to Lambda containers on this network.
+#
+# Usage:
+#   mvn clean package -pl teavm-lambda-demo-auth -am
+#   ./teavm-lambda-demo-auth/run-tests.sh
+#
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - ./teavm-lambda-demo-auth/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo"]
+      interval: 2s
+      timeout: 5s
+      retries: 10

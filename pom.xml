@@ -60,6 +60,7 @@
         <module>teavm-lambda-auth-jvm</module>
         <module>teavm-lambda-demo</module>
         <module>teavm-lambda-demo-cloudrun</module>
+        <module>teavm-lambda-demo-auth</module>
         <module>teavm-lambda-demo-nosqldb</module>
     </modules>
 
