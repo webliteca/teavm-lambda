@@ -214,8 +214,8 @@ class RoutingTest {
             put("/c") { ok("") }
             patch("/d") { ok("") }
             delete("/e") { ok("") }
-            head("/f") { ok("") }
-            options("/g") { ok("") }
+            "/f" { head { ok("") } }
+            "/g" { options { ok("") } }
         }
         val methods = scope.routes.map { it.method }
         assertEquals(listOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"), methods)
