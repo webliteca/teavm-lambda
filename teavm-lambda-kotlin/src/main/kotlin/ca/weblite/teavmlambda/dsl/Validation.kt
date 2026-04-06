@@ -59,6 +59,7 @@ class ValidationException(val errors: List<FieldError>) : HttpException(400, "Va
 
 @ValidationDslMarker
 class ValidationScope {
+    @PublishedApi
     internal val errors = mutableListOf<FieldError>()
 
     /**

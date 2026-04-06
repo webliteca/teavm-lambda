@@ -134,7 +134,7 @@ internal sealed class PathSegment {
  * Matches requests against registered routes, extracts path params,
  * and catches [HttpException] to produce ProblemDetail responses.
  */
-class DslRouter(
+class DslRouter internal constructor(
     private val routes: List<CompiledRoute>,
     private val container: Container
 ) : ca.weblite.teavmlambda.api.Router {
@@ -203,7 +203,7 @@ class DslRouter(
 
     companion object {
         /** Compile a [RoutingScope] into a [DslRouter]. */
-        fun compile(routes: List<Route>, container: Container): DslRouter {
+        internal fun compile(routes: List<Route>, container: Container): DslRouter {
             val compiled = routes.map { route ->
                 val segments = route.pathPattern
                     .trimEnd('/')
