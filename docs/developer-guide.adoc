@@ -378,6 +378,10 @@ Each module serves a specific purpose and targets either all platforms, Node.js 
 | `teavm-lambda-adapter-httpserver`
 | JDK built-in HttpServer adapter (zero external dependencies)
 | JVM
+
+| `teavm-lambda-adapter-war`
+| Servlet adapter for WAR deployment on Tomcat, TomEE, Jetty, and other Servlet containers
+| JVM
 |===
 
 .Database
@@ -2119,41 +2123,215 @@ DATABASE_URL=postgresql://demo:demo@localhost:5432/demo \
 PORT=3000 java -jar target/my-app.jar
 ----
 
+=== WAR Deployment (Tomcat / TomEE / Jetty)
+
+For deployment to a Servlet container such as Apache Tomcat, TomEE, or Eclipse Jetty:
+
+==== Create a Servlet Class
+
+Subclass `WarServlet` and implement `createRouter()` to wire up your application.
+The servlet is the WAR equivalent of `Main.java` — it creates the container, router, and middleware pipeline:
+
+[source,java]
+----
+package com.example.myapp;
+
+import ca.weblite.teavmlambda.api.Container;
+import ca.weblite.teavmlambda.api.MiddlewareRouter;
+import ca.weblite.teavmlambda.api.Platform;
+import ca.weblite.teavmlambda.api.Router;
+import ca.weblite.teavmlambda.api.db.Database;
+import ca.weblite.teavmlambda.api.db.DatabaseFactory;
+import ca.weblite.teavmlambda.generated.GeneratedContainer;
+import ca.weblite.teavmlambda.generated.GeneratedRouter;
+import ca.weblite.teavmlambda.impl.jvm.war.WarServlet;
+import jakarta.servlet.annotation.WebServlet;
+
+@WebServlet(urlPatterns = "/*")
+public class MyServlet extends WarServlet {
+
+    @Override
+    protected Router createRouter() {
+        String dbUrl = Platform.env("DATABASE_URL",
+                "postgresql://localhost/mydb");
+
+        Container container = new GeneratedContainer();
+        Database db = DatabaseFactory.create(dbUrl);
+        container.register(Database.class, db);
+
+        return new MiddlewareRouter(new GeneratedRouter(container))
+                .use(/* your middleware */);
+    }
+}
+----
+
+TIP: You do **not** call `Platform.start(router)` in a WAR deployment.
+The Servlet container manages the application lifecycle — the `WarServlet` initializes the router on first request via its `init()` method.
+
+==== Maven Configuration
+
+Add the `jvm-war` profile to your `pom.xml`.
+This profile adds the WAR adapter dependency and configures the `maven-war-plugin`:
+
+[source,xml]
+----
+<!-- Base dependencies (always present) -->
+<dependencies>
+    <!-- ... your core dependencies ... -->
+    <dependency>
+        <groupId>ca.weblite</groupId>
+        <artifactId>teavm-lambda-adapter-war</artifactId>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>jakarta.servlet</groupId>
+        <artifactId>jakarta.servlet-api</artifactId>
+        <version>6.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+
+<profiles>
+    <profile>
+        <id>jvm-war</id>
+        <dependencies>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-adapter-war</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-core-jvm</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-db-jvm</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>42.7.3</version>
+            </dependency>
+        </dependencies>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>ca.weblite</groupId>
+                                <artifactId>teavm-lambda-processor</artifactId>
+                                <version>${teavm-lambda.version}</version>
+                            </path>
+                            <path>
+                                <groupId>ca.weblite</groupId>
+                                <artifactId>teavm-lambda-core</artifactId>
+                                <version>${teavm-lambda.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>3.4.0</version>
+                    <executions>
+                        <execution>
+                            <id>build-war</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>war</goal>
+                            </goals>
+                            <configuration>
+                                <failOnMissingWebXml>false</failOnMissingWebXml>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
+----
+
+The `jakarta.servlet-api` and `teavm-lambda-adapter-war` dependencies use `provided` scope in the base dependencies so the servlet class compiles in all profiles, but the Servlet API is supplied by the container at runtime.
+
+==== Build and Deploy
+
+[source,bash]
+----
+# Build the WAR
+mvn clean package -P jvm-war
+
+# The WAR file is at:
+ls target/my-app.war
+
+# Deploy to Tomcat — copy the WAR to Tomcat's webapps directory
+cp target/my-app.war $CATALINA_HOME/webapps/ROOT.war
+
+# Or run with Docker (Tomcat 10.1)
+docker run -d -p 8080:8080 \
+  -e DATABASE_URL=postgresql://user:pass@dbhost:5432/mydb \
+  -v $(pwd)/target/my-app.war:/usr/local/tomcat/webapps/ROOT.war \
+  tomcat:10.1-jdk21-temurin
+----
+
+NOTE: The WAR adapter requires a **Servlet 6.0+** container (Jakarta Servlet namespace).
+This means Tomcat 10.1+, TomEE 10+, Jetty 12+, or WildFly 27+.
+Older containers using the `javax.servlet` namespace are not supported.
+
+==== Environment Variables
+
+Environment variables work the same way as other JVM deployments.
+Set `DATABASE_URL` and any other variables via the Servlet container's configuration mechanism:
+
+* **Tomcat**: `setenv.sh` or `context.xml` environment entries
+* **Docker**: `-e` flags or Docker Compose `environment` section
+* **System properties**: can also be used as a fallback
+
 === Deployment Comparison
 
-[cols="1,1,1,1,1"]
+[cols="1,1,1,1,1,1"]
 |===
-| | AWS Lambda | Cloud Run | JVM Standalone | JVM Lambda
+| | AWS Lambda | Cloud Run | JVM Standalone | JVM Lambda | WAR (Servlet)
 
 | Profile
 | `teavm` (default)
 | `teavm`
 | `jvm-server`
 | `jvm`
+| `jvm-war`
 
 | Runtime
 | Node.js {nodejs-version}
 | Node.js {nodejs-version}
 | JVM {java-version}
 | JVM {java-version}
+| JVM {java-version} (Servlet container)
 
 | Compiler
 | TeaVM
 | TeaVM
 | javac + shade
 | javac + shade
+| javac + war
 
 | Cold start
 | ~100ms
 | ~100ms
 | ~1-3s
 | ~3-8s
+| ~1-3s (depends on container)
 
 | Output
 | `target/lambda/`
 | `target/cloudrun/`
 | Uber JAR
 | Uber JAR
+| WAR file
 |===
 
 
@@ -2218,6 +2396,11 @@ teavm-lambda uses Maven profiles to control the compilation target:
 | javac → bytecode, maven-shade uber JAR
 | Single JAR in `target/`
 | `teavm-lambda-adapter-httpserver`
+
+| `jvm-war`
+| javac → bytecode, maven-war WAR
+| WAR file in `target/`
+| `teavm-lambda-adapter-war`
 |===
 
 === Annotation Processor Configuration
@@ -2324,6 +2507,9 @@ mvn clean package -pl teavm-lambda-demo -am
 
 # Test against a running server (any base URL)
 ./teavm-lambda-demo/test.sh http://localhost:8080
+
+# WAR deployment integration tests (Tomcat)
+./teavm-lambda-demo-features/run-war-tests.sh
 ----
 
 === Parity Testing
