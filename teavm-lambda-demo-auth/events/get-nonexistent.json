@@ -1,0 +1,7 @@
+{
+  "httpMethod": "GET",
+  "path": "/nonexistent",
+  "headers": {},
+  "queryStringParameters": null,
+  "body": null
+}

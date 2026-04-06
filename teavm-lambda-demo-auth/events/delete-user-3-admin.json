@@ -1,0 +1,9 @@
+{
+  "httpMethod": "DELETE",
+  "path": "/users/3",
+  "headers": {
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbGljZSIsImlzcyI6InRlYXZtLWRlbW8iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiZ3JvdXBzIjpbImFkbWluIiwidXNlciJdLCJuYW1lIjoiQWxpY2UiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIn0.Ci5FVqVwi6kpQsKr1kWLKQl0H1ABrxyAnGOhdzdUMLI"
+  },
+  "queryStringParameters": null,
+  "body": null
+}

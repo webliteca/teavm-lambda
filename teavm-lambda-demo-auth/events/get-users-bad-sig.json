@@ -1,0 +1,9 @@
+{
+  "httpMethod": "GET",
+  "path": "/users",
+  "headers": {
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbGljZSIsImlzcyI6InRlYXZtLWRlbW8iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMCwiZ3JvdXBzIjpbImFkbWluIiwidXNlciJdLCJuYW1lIjoiQWxpY2UiLCJlbWFpbCI6ImFsaWNlQGV4YW1wbGUuY29tIn0.invalidsignature"
+  },
+  "queryStringParameters": null,
+  "body": null
+}
