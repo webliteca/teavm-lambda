@@ -1,0 +1,9 @@
+{
+  "httpMethod": "PATCH",
+  "path": "/items/1",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": null,
+  "body": "{\"quantity\":99}"
+}

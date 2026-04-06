@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "path": "/items",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": null,
+  "body": "{\"name\":\"TestItem\",\"description\":\"A test item\",\"quantity\":42}"
+}

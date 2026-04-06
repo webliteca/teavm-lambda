@@ -62,6 +62,10 @@
         <module>teavm-lambda-demo-cloudrun</module>
         <module>teavm-lambda-demo-auth</module>
         <module>teavm-lambda-demo-nosqldb</module>
+        <module>teavm-lambda-compression</module>
+        <module>teavm-lambda-compression-jvm</module>
+        <module>teavm-lambda-demo-features</module>
+        <module>teavm-lambda-demo-features-lambda</module>
     </modules>
 
     <properties>
@@ -190,6 +194,16 @@
             <dependency>
                 <groupId>ca.weblite</groupId>
                 <artifactId>teavm-lambda-sentry</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-compression</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-compression-jvm</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

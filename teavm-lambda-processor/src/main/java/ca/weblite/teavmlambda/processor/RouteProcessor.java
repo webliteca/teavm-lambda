@@ -108,6 +108,9 @@ public class RouteProcessor extends AbstractProcessor {
         if (method.getAnnotation(POST.class) != null) return "POST";
         if (method.getAnnotation(PUT.class) != null) return "PUT";
         if (method.getAnnotation(DELETE.class) != null) return "DELETE";
+        if (method.getAnnotation(PATCH.class) != null) return "PATCH";
+        if (method.getAnnotation(HEAD.class) != null) return "HEAD";
+        if (method.getAnnotation(OPTIONS.class) != null) return "OPTIONS";
         return null;
     }
 
@@ -119,18 +122,28 @@ public class RouteProcessor extends AbstractProcessor {
 
             PathParam pathParam = param.getAnnotation(PathParam.class);
             if (pathParam != null) {
-                params.add(new MethodParam(MethodParam.Kind.PATH, pathParam.value(), typeName));
+                params.add(new MethodParam(MethodParam.Kind.PATH, pathParam.value(), typeName,
+                        extractValidation(param)));
                 continue;
             }
 
             QueryParam queryParam = param.getAnnotation(QueryParam.class);
             if (queryParam != null) {
-                params.add(new MethodParam(MethodParam.Kind.QUERY, queryParam.value(), typeName));
+                params.add(new MethodParam(MethodParam.Kind.QUERY, queryParam.value(), typeName,
+                        extractValidation(param)));
+                continue;
+            }
+
+            HeaderParam headerParam = param.getAnnotation(HeaderParam.class);
+            if (headerParam != null) {
+                params.add(new MethodParam(MethodParam.Kind.HEADER, headerParam.value(), typeName,
+                        extractValidation(param)));
                 continue;
             }
 
             if (param.getAnnotation(Body.class) != null) {
-                params.add(new MethodParam(MethodParam.Kind.BODY, null, typeName));
+                params.add(new MethodParam(MethodParam.Kind.BODY, null, typeName,
+                        extractValidation(param)));
                 continue;
             }
 
@@ -146,6 +159,29 @@ public class RouteProcessor extends AbstractProcessor {
             }
         }
         return params;
+    }
+
+    private ValidationInfo extractValidation(VariableElement param) {
+        NotNull notNull = param.getAnnotation(NotNull.class);
+        NotEmpty notEmpty = param.getAnnotation(NotEmpty.class);
+        Min min = param.getAnnotation(Min.class);
+        Max max = param.getAnnotation(Max.class);
+        ca.weblite.teavmlambda.api.annotation.Pattern pattern =
+                param.getAnnotation(ca.weblite.teavmlambda.api.annotation.Pattern.class);
+
+        if (notNull == null && notEmpty == null && min == null && max == null && pattern == null) {
+            return ValidationInfo.NONE;
+        }
+
+        return new ValidationInfo(
+                notNull != null,
+                notEmpty != null,
+                min != null, min != null ? min.value() : 0,
+                min != null ? min.message() : "",
+                max != null, max != null ? max.value() : 0,
+                max != null ? max.message() : "",
+                pattern != null, pattern != null ? pattern.value() : "",
+                pattern != null ? pattern.message() : "");
     }
 
     private SecurityInfo extractSecurityInfo(Element element) {
@@ -402,6 +438,61 @@ public class RouteProcessor extends AbstractProcessor {
             }
         }
 
+        // Extract header params into local variables
+        for (MethodParam param : route.params) {
+            if (param.kind == MethodParam.Kind.HEADER) {
+                String varName = "header_" + param.name.replace("-", "_").toLowerCase();
+                out.println("            String " + varName + " = request.getHeaders().get(\""
+                        + param.name.toLowerCase() + "\");");
+                out.println("            if (" + varName + " == null) " + varName
+                        + " = request.getHeaders().get(\"" + param.name + "\");");
+            }
+        }
+
+        // Generate validation checks
+        boolean hasValidation = route.params.stream().anyMatch(p -> p.validation.hasAny());
+        if (hasValidation) {
+            out.println("            ca.weblite.teavmlambda.api.validation.ValidationResult __validationResult = new ca.weblite.teavmlambda.api.validation.ValidationResult();");
+            for (MethodParam param : route.params) {
+                if (!param.validation.hasAny()) continue;
+                String paramExpr = paramExpression(param);
+                String fieldLabel = param.name != null ? param.name : "body";
+                if (param.validation.notNull()) {
+                    out.println("            if (" + paramExpr + " == null) __validationResult.addError(\""
+                            + fieldLabel + "\", \"must not be null\");");
+                }
+                if (param.validation.notEmpty()) {
+                    out.println("            if (" + paramExpr + " == null || " + paramExpr
+                            + ".isEmpty()) __validationResult.addError(\"" + fieldLabel + "\", \"must not be empty\");");
+                }
+                if (param.validation.hasMin()) {
+                    String msg = param.validation.minMessage().isEmpty()
+                            ? "must be at least " + param.validation.min() : param.validation.minMessage();
+                    out.println("            if (" + paramExpr + " != null) { try { if (Long.parseLong("
+                            + paramExpr + ") < " + param.validation.min() + "L) __validationResult.addError(\""
+                            + fieldLabel + "\", \"" + msg + "\"); } catch (NumberFormatException e) {"
+                            + " __validationResult.addError(\"" + fieldLabel + "\", \"must be a number\"); } }");
+                }
+                if (param.validation.hasMax()) {
+                    String msg = param.validation.maxMessage().isEmpty()
+                            ? "must be at most " + param.validation.max() : param.validation.maxMessage();
+                    out.println("            if (" + paramExpr + " != null) { try { if (Long.parseLong("
+                            + paramExpr + ") > " + param.validation.max() + "L) __validationResult.addError(\""
+                            + fieldLabel + "\", \"" + msg + "\"); } catch (NumberFormatException e) {"
+                            + " __validationResult.addError(\"" + fieldLabel + "\", \"must be a number\"); } }");
+                }
+                if (param.validation.hasPattern()) {
+                    String msg = param.validation.patternMessage().isEmpty()
+                            ? "must match pattern " + param.validation.pattern() : param.validation.patternMessage();
+                    out.println("            if (" + paramExpr + " != null && !" + paramExpr
+                            + ".matches(\"" + param.validation.pattern().replace("\\", "\\\\")
+                                    .replace("\"", "\\\"") + "\")) __validationResult.addError(\""
+                            + fieldLabel + "\", \"" + msg.replace("\"", "\\\"") + "\");");
+                }
+            }
+            out.println("            if (!__validationResult.isValid()) return __validationResult.toResponse();");
+        }
+
         // Build method call arguments
         StringBuilder args = new StringBuilder();
         for (int i = 0; i < route.params.size(); i++) {
@@ -413,6 +504,9 @@ public class RouteProcessor extends AbstractProcessor {
                     break;
                 case QUERY:
                     args.append("request.getQueryParams().get(\"").append(param.name).append("\")");
+                    break;
+                case HEADER:
+                    args.append("header_").append(param.name.replace("-", "_").toLowerCase());
                     break;
                 case BODY:
                     args.append("request.getBody()");
@@ -428,6 +522,16 @@ public class RouteProcessor extends AbstractProcessor {
 
         out.println("            return " + fieldName + "." + route.methodName + "(" + args + ");");
         out.println("        }");
+    }
+
+    private String paramExpression(MethodParam param) {
+        switch (param.kind) {
+            case PATH: return "pathParams.get(\"" + param.name + "\")";
+            case QUERY: return "request.getQueryParams().get(\"" + param.name + "\")";
+            case HEADER: return "header_" + param.name.replace("-", "_").toLowerCase();
+            case BODY: return "request.getBody()";
+            default: return "null";
+        }
     }
 
     private String buildOpenApiJson(List<ResourceClass> resources) {
@@ -527,7 +631,8 @@ public class RouteProcessor extends AbstractProcessor {
                 // Parameters
                 List<MethodParam> paramList = new ArrayList<>();
                 for (MethodParam p : route.params) {
-                    if (p.kind == MethodParam.Kind.PATH || p.kind == MethodParam.Kind.QUERY) {
+                    if (p.kind == MethodParam.Kind.PATH || p.kind == MethodParam.Kind.QUERY
+                            || p.kind == MethodParam.Kind.HEADER) {
                         paramList.add(p);
                     }
                 }
@@ -535,7 +640,12 @@ public class RouteProcessor extends AbstractProcessor {
                     json.append("        \"parameters\": [\n");
                     for (int p = 0; p < paramList.size(); p++) {
                         MethodParam param = paramList.get(p);
-                        String in = param.kind == MethodParam.Kind.PATH ? "path" : "query";
+                        String in;
+                        switch (param.kind) {
+                            case PATH: in = "path"; break;
+                            case HEADER: in = "header"; break;
+                            default: in = "query"; break;
+                        }
                         json.append("          {\n");
                         json.append("            \"name\": ").append(jsonString(param.name)).append(",\n");
                         json.append("            \"in\": ").append(jsonString(in)).append(",\n");
@@ -661,8 +771,23 @@ public class RouteProcessor extends AbstractProcessor {
 
     private enum SecurityKind { NONE, PERMIT_ALL, DENY_ALL, ROLES_ALLOWED }
 
-    private record MethodParam(Kind kind, String name, String typeName) {
-        enum Kind { PATH, QUERY, BODY, REQUEST, SECURITY_CONTEXT }
+    private record MethodParam(Kind kind, String name, String typeName, ValidationInfo validation) {
+        MethodParam(Kind kind, String name, String typeName) {
+            this(kind, name, typeName, ValidationInfo.NONE);
+        }
+        enum Kind { PATH, QUERY, BODY, REQUEST, SECURITY_CONTEXT, HEADER }
+    }
+
+    private record ValidationInfo(boolean notNull, boolean notEmpty,
+                                  boolean hasMin, long min, String minMessage,
+                                  boolean hasMax, long max, String maxMessage,
+                                  boolean hasPattern, String pattern, String patternMessage) {
+        static final ValidationInfo NONE = new ValidationInfo(
+                false, false, false, 0, "", false, 0, "", false, "", "");
+
+        boolean hasAny() {
+            return notNull || notEmpty || hasMin || hasMax || hasPattern;
+        }
     }
 
     private record ApiResponseInfo(int code, String description, String mediaType) {}

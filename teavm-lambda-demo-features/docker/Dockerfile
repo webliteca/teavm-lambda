@@ -1,9 +1,4 @@
-# Builds and runs the TeaVM-compiled Cloud Run application.
-#
-# Usage:
-#   docker build -f teavm-lambda-demo-cloudrun/docker/Dockerfile -t teavm-cloudrun-demo .
-#   docker run -p 8080:8080 -e DATABASE_URL=postgresql://demo:demo@host.docker.internal:5432/demo teavm-cloudrun-demo
-#
+# Builds and runs the TeaVM-compiled Cloud Run features demo.
 FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /app
@@ -40,7 +35,7 @@ COPY teavm-lambda-compression-jvm/pom.xml teavm-lambda-compression-jvm/
 COPY teavm-lambda-demo-features/pom.xml teavm-lambda-demo-features/
 COPY teavm-lambda-demo-features-lambda/pom.xml teavm-lambda-demo-features-lambda/
 
-RUN mvn dependency:go-offline -pl teavm-lambda-demo-cloudrun -am -q || true
+RUN mvn dependency:go-offline -pl teavm-lambda-demo-features -am -q || true
 
 # Copy source and build
 COPY teavm-lambda-core/src teavm-lambda-core/src
@@ -51,17 +46,18 @@ COPY teavm-lambda-db-api/src teavm-lambda-db-api/src
 COPY teavm-lambda-db/src teavm-lambda-db/src
 COPY teavm-lambda-logging/src teavm-lambda-logging/src
 COPY teavm-lambda-sentry/src teavm-lambda-sentry/src
-COPY teavm-lambda-demo-cloudrun/src teavm-lambda-demo-cloudrun/src
-COPY teavm-lambda-demo-cloudrun/docker/package.json teavm-lambda-demo-cloudrun/docker/
-COPY teavm-lambda-demo-cloudrun/docker/server.js teavm-lambda-demo-cloudrun/docker/
+COPY teavm-lambda-compression/src teavm-lambda-compression/src
+COPY teavm-lambda-demo-features/src teavm-lambda-demo-features/src
+COPY teavm-lambda-demo-features/docker/package.json teavm-lambda-demo-features/docker/
+COPY teavm-lambda-demo-features/docker/server.js teavm-lambda-demo-features/docker/
 
-RUN mvn clean package -pl teavm-lambda-demo-cloudrun -am -Dexec.skip=true -q
+RUN mvn clean package -pl teavm-lambda-demo-features -am -Dexec.skip=true -q
 
 # Runtime stage
 FROM node:22-slim
 
 WORKDIR /app
-COPY --from=build /app/teavm-lambda-demo-cloudrun/target/cloudrun/ .
+COPY --from=build /app/teavm-lambda-demo-features/target/cloudrun/ .
 RUN npm install --production
 
 EXPOSE 8080
