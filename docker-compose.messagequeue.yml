@@ -1,0 +1,35 @@
+# Isolated test environment for the Message Queue demo.
+# ElasticMQ runs in Docker as an SQS-compatible endpoint.
+# SAM local invoke sends test events to Lambda containers on this network.
+#
+# Usage:
+#   mvn clean package -pl teavm-lambda-demo-messagequeue -am
+#   ./teavm-lambda-demo-messagequeue/run-tests.sh
+#
+services:
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://localhost:9324/?Action=ListQueues' || exit 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  elasticmq-seed:
+    image: amazon/aws-cli:latest
+    depends_on:
+      elasticmq:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        aws sqs create-queue \
+          --endpoint-url http://elasticmq:9324 \
+          --queue-name demo-queue
+
+        echo "ElasticMQ seed complete"

@@ -1,0 +1,7 @@
+{
+  "httpMethod": "GET",
+  "path": "/messages/count",
+  "headers": {},
+  "queryStringParameters": null,
+  "body": null
+}

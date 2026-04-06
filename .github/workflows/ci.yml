@@ -176,10 +176,58 @@ jobs:
       - name: Run Node.js image integration tests
         run: ./teavm-lambda-image/run-tests.sh
 
+  test-objectstore:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Build Object Store demo
+        run: mvn -B clean package -pl teavm-lambda-demo-objectstore -am
+
+      - name: Run Object Store integration tests
+        run: ./teavm-lambda-demo-objectstore/run-tests.sh
+
+  test-messagequeue:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Build Message Queue demo
+        run: mvn -B clean package -pl teavm-lambda-demo-messagequeue -am
+
+      - name: Run Message Queue integration tests
+        run: ./teavm-lambda-demo-messagequeue/run-tests.sh
+
   # ─── Stage 3: Publish (only on push to main) ───────────────────────
 
   deploy:
-    needs: [test-lambda-teavm, test-lambda-jvm, test-cloudrun, test-nosqldb, test-image-jvm, test-image-js]
+    needs: [test-lambda-teavm, test-lambda-jvm, test-cloudrun, test-nosqldb, test-image-jvm, test-image-js, test-objectstore, test-messagequeue]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:

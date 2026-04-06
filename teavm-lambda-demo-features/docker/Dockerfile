@@ -34,6 +34,18 @@ COPY teavm-lambda-compression/pom.xml teavm-lambda-compression/
 COPY teavm-lambda-compression-jvm/pom.xml teavm-lambda-compression-jvm/
 COPY teavm-lambda-demo-features/pom.xml teavm-lambda-demo-features/
 COPY teavm-lambda-demo-features-lambda/pom.xml teavm-lambda-demo-features-lambda/
+COPY teavm-lambda-objectstore/pom.xml teavm-lambda-objectstore/
+COPY teavm-lambda-s3/pom.xml teavm-lambda-s3/
+COPY teavm-lambda-s3-jvm/pom.xml teavm-lambda-s3-jvm/
+COPY teavm-lambda-gcs/pom.xml teavm-lambda-gcs/
+COPY teavm-lambda-gcs-jvm/pom.xml teavm-lambda-gcs-jvm/
+COPY teavm-lambda-messagequeue/pom.xml teavm-lambda-messagequeue/
+COPY teavm-lambda-sqs/pom.xml teavm-lambda-sqs/
+COPY teavm-lambda-sqs-jvm/pom.xml teavm-lambda-sqs-jvm/
+COPY teavm-lambda-pubsub/pom.xml teavm-lambda-pubsub/
+COPY teavm-lambda-pubsub-jvm/pom.xml teavm-lambda-pubsub-jvm/
+COPY teavm-lambda-demo-objectstore/pom.xml teavm-lambda-demo-objectstore/
+COPY teavm-lambda-demo-messagequeue/pom.xml teavm-lambda-demo-messagequeue/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo-features -am -q || true
 

@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: TeaVM Lambda Object Store Demo - Test configuration (MinIO)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  DemoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: teavm-lambda-demo-objectstore/target/lambda/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Environment:
+        Variables:
+          # MinIO via compose service name
+          OBJECTSTORE_URI: s3://minio:9000
+          OBJECTSTORE_BUCKET: demo-bucket
+          # Required by AWS SDK when talking to MinIO
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_DEFAULT_REGION: us-east-1
+      Events:
+        RootRequest:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        ProxyRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY

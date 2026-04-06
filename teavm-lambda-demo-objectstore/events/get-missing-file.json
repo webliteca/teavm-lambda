@@ -1,0 +1,7 @@
+{
+  "httpMethod": "GET",
+  "path": "/files/no-such-file.txt",
+  "headers": {},
+  "queryStringParameters": null,
+  "body": null
+}

@@ -1,0 +1,7 @@
+{
+  "httpMethod": "GET",
+  "path": "/messages",
+  "headers": {},
+  "queryStringParameters": null,
+  "body": null
+}
