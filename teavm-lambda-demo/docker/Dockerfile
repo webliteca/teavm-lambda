@@ -33,6 +33,9 @@ COPY teavm-lambda-image-jvm/pom.xml teavm-lambda-image-jvm/
 COPY teavm-lambda-demo/pom.xml teavm-lambda-demo/
 COPY teavm-lambda-demo-cloudrun/pom.xml teavm-lambda-demo-cloudrun/
 COPY teavm-lambda-demo-nosqldb/pom.xml teavm-lambda-demo-nosqldb/
+COPY teavm-lambda-auth/pom.xml teavm-lambda-auth/
+COPY teavm-lambda-auth-jvm/pom.xml teavm-lambda-auth-jvm/
+COPY teavm-lambda-demo-auth/pom.xml teavm-lambda-demo-auth/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo -am -q || true
 
