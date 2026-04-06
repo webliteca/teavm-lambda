@@ -18,6 +18,7 @@ COPY teavm-lambda-adapter-lambda/pom.xml teavm-lambda-adapter-lambda/
 COPY teavm-lambda-adapter-lambda-jvm/pom.xml teavm-lambda-adapter-lambda-jvm/
 COPY teavm-lambda-adapter-cloudrun/pom.xml teavm-lambda-adapter-cloudrun/
 COPY teavm-lambda-adapter-httpserver/pom.xml teavm-lambda-adapter-httpserver/
+COPY teavm-lambda-adapter-war/pom.xml teavm-lambda-adapter-war/
 COPY teavm-lambda-db-api/pom.xml teavm-lambda-db-api/
 COPY teavm-lambda-db/pom.xml teavm-lambda-db/
 COPY teavm-lambda-db-jvm/pom.xml teavm-lambda-db-jvm/
@@ -51,6 +52,7 @@ COPY teavm-lambda-pubsub/pom.xml teavm-lambda-pubsub/
 COPY teavm-lambda-pubsub-jvm/pom.xml teavm-lambda-pubsub-jvm/
 COPY teavm-lambda-demo-objectstore/pom.xml teavm-lambda-demo-objectstore/
 COPY teavm-lambda-demo-messagequeue/pom.xml teavm-lambda-demo-messagequeue/
+COPY teavm-lambda-kotlin/pom.xml teavm-lambda-kotlin/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo-cloudrun -am -q || true
 
