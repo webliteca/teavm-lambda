@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ca.weblite</groupId>
+        <artifactId>teavm-lambda-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>teavm-lambda-auth-jvm</artifactId>
+    <name>TeaVM Lambda Auth JVM</name>
+    <description>JWT authentication using javax.crypto / java.security (JVM implementation)</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-core</artifactId>
+        </dependency>
+    </dependencies>
+</project>

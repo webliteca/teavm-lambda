@@ -55,6 +55,9 @@ public class RouteProcessor extends AbstractProcessor {
 
         ApiInfo apiInfo = typeElement.getAnnotation(ApiInfo.class);
 
+        // Class-level security
+        SecurityInfo classSecurity = extractSecurityInfo(typeElement);
+
         List<RouteMethod> methods = new ArrayList<>();
         for (Element enclosed : typeElement.getEnclosedElements()) {
             if (enclosed.getKind() != ElementKind.METHOD) {
@@ -84,8 +87,13 @@ public class RouteProcessor extends AbstractProcessor {
                 responseInfos.add(new ApiResponseInfo(r.code(), r.description(), r.mediaType()));
             }
 
+            // Method-level security overrides class-level
+            SecurityInfo methodSecurity = extractSecurityInfo(method);
+            SecurityInfo effectiveSecurity = methodSecurity.kind != SecurityKind.NONE
+                    ? methodSecurity : classSecurity;
+
             methods.add(new RouteMethod(httpMethod, fullPath, method.getSimpleName().toString(),
-                    params, summary, description, responseInfos));
+                    params, summary, description, responseInfos, effectiveSecurity));
         }
 
         if (methods.isEmpty()) {
@@ -129,14 +137,46 @@ public class RouteProcessor extends AbstractProcessor {
             // Unannotated Request parameter
             if (typeName.equals("ca.weblite.teavmlambda.api.Request")) {
                 params.add(new MethodParam(MethodParam.Kind.REQUEST, null, typeName));
+                continue;
+            }
+
+            // Unannotated SecurityContext parameter
+            if (typeName.equals("ca.weblite.teavmlambda.api.auth.SecurityContext")) {
+                params.add(new MethodParam(MethodParam.Kind.SECURITY_CONTEXT, null, typeName));
             }
         }
         return params;
     }
 
+    private SecurityInfo extractSecurityInfo(Element element) {
+        DenyAll denyAll = element.getAnnotation(DenyAll.class);
+        if (denyAll != null) {
+            return new SecurityInfo(SecurityKind.DENY_ALL, new String[0]);
+        }
+
+        PermitAll permitAll = element.getAnnotation(PermitAll.class);
+        if (permitAll != null) {
+            return new SecurityInfo(SecurityKind.PERMIT_ALL, new String[0]);
+        }
+
+        RolesAllowed rolesAllowed = element.getAnnotation(RolesAllowed.class);
+        if (rolesAllowed != null) {
+            return new SecurityInfo(SecurityKind.ROLES_ALLOWED, rolesAllowed.value());
+        }
+
+        return new SecurityInfo(SecurityKind.NONE, new String[0]);
+    }
+
     private void generateRouter(List<ResourceClass> resources) {
         String packageName = "ca.weblite.teavmlambda.generated";
         String className = "GeneratedRouter";
+
+        // Check if any route uses security
+        boolean hasAnySecurity = resources.stream()
+                .flatMap(r -> r.methods.stream())
+                .anyMatch(m -> m.security.kind == SecurityKind.ROLES_ALLOWED
+                        || m.security.kind == SecurityKind.DENY_ALL
+                        || m.params.stream().anyMatch(p -> p.kind == MethodParam.Kind.SECURITY_CONTEXT));
 
         try {
             JavaFileObject file = processingEnv.getFiler().createSourceFile(packageName + "." + className);
@@ -148,6 +188,12 @@ public class RouteProcessor extends AbstractProcessor {
                 out.println("import ca.weblite.teavmlambda.api.Router;");
                 out.println("import java.util.HashMap;");
                 out.println("import java.util.Map;");
+                if (hasAnySecurity) {
+                    out.println("import ca.weblite.teavmlambda.api.auth.JwtValidator;");
+                    out.println("import ca.weblite.teavmlambda.api.auth.JwtClaims;");
+                    out.println("import ca.weblite.teavmlambda.api.auth.JwtValidationException;");
+                    out.println("import ca.weblite.teavmlambda.api.auth.SecurityContext;");
+                }
                 out.println();
                 out.println("public final class GeneratedRouter implements Router {");
                 out.println();
@@ -156,6 +202,9 @@ public class RouteProcessor extends AbstractProcessor {
                 for (ResourceClass resource : resources) {
                     String fieldName = fieldNameFor(resource.simpleName);
                     out.println("    private final " + resource.qualifiedName + " " + fieldName + ";");
+                }
+                if (hasAnySecurity) {
+                    out.println("    private final JwtValidator jwtValidator;");
                 }
                 out.println();
 
@@ -186,6 +235,9 @@ public class RouteProcessor extends AbstractProcessor {
                     String fieldName = fieldNameFor(resource.simpleName);
                     out.println("        this." + fieldName + " = container.get(" + resource.qualifiedName + ".class);");
                 }
+                if (hasAnySecurity) {
+                    out.println("        this.jwtValidator = container.get(JwtValidator.class);");
+                }
                 out.println("    }");
                 out.println();
 
@@ -197,10 +249,17 @@ public class RouteProcessor extends AbstractProcessor {
                     if (i > 0) out.print(", ");
                     out.print(resource.qualifiedName + " " + fieldName);
                 }
+                if (hasAnySecurity) {
+                    if (!resources.isEmpty()) out.print(", ");
+                    out.print("JwtValidator jwtValidator");
+                }
                 out.println(") {");
                 for (ResourceClass resource : resources) {
                     String fieldName = fieldNameFor(resource.simpleName);
                     out.println("        this." + fieldName + " = " + fieldName + ";");
+                }
+                if (hasAnySecurity) {
+                    out.println("        this.jwtValidator = jwtValidator;");
                 }
                 out.println("    }");
                 out.println();
@@ -240,6 +299,26 @@ public class RouteProcessor extends AbstractProcessor {
 
                 out.println("        return Response.status(404).body(\"Not Found\");");
                 out.println("    }");
+
+                // Generate authenticateRequest helper if needed
+                if (hasAnySecurity) {
+                    out.println();
+                    out.println("    private SecurityContext authenticateRequest(Request request) {");
+                    out.println("        String authHeader = request.getHeaders().get(\"authorization\");");
+                    out.println("        if (authHeader == null) authHeader = request.getHeaders().get(\"Authorization\");");
+                    out.println("        if (authHeader == null || !authHeader.startsWith(\"Bearer \")) {");
+                    out.println("            return null;");
+                    out.println("        }");
+                    out.println("        String token = authHeader.substring(7);");
+                    out.println("        try {");
+                    out.println("            JwtClaims claims = jwtValidator.validate(token);");
+                    out.println("            return claims.toSecurityContext();");
+                    out.println("        } catch (JwtValidationException e) {");
+                    out.println("            return null;");
+                    out.println("        }");
+                    out.println("    }");
+                }
+
                 out.println("}");
             }
         } catch (IOException e) {
@@ -282,6 +361,47 @@ public class RouteProcessor extends AbstractProcessor {
             }
         }
 
+        // Security checks
+        boolean needsSecCtx = route.security.kind == SecurityKind.ROLES_ALLOWED
+                || route.security.kind == SecurityKind.DENY_ALL
+                || route.params.stream().anyMatch(p -> p.kind == MethodParam.Kind.SECURITY_CONTEXT);
+
+        if (route.security.kind == SecurityKind.DENY_ALL) {
+            out.println("            return Response.status(403)"
+                    + ".header(\"Content-Type\", \"application/json\")"
+                    + ".body(\"{\\\"error\\\":\\\"Forbidden\\\"}\");");
+            out.println("        }");
+            return;
+        }
+
+        if (needsSecCtx) {
+            out.println("            SecurityContext securityContext = authenticateRequest(request);");
+        }
+
+        if (route.security.kind == SecurityKind.ROLES_ALLOWED) {
+            out.println("            if (securityContext == null) {");
+            out.println("                return Response.status(401)"
+                    + ".header(\"Content-Type\", \"application/json\")"
+                    + ".body(\"{\\\"error\\\":\\\"Unauthorized\\\"}\");");
+            out.println("            }");
+
+            // Role check
+            String[] roles = route.security.roles;
+            if (roles.length > 0) {
+                StringBuilder roleCheck = new StringBuilder("            if (");
+                for (int r = 0; r < roles.length; r++) {
+                    if (r > 0) roleCheck.append(" && ");
+                    roleCheck.append("!securityContext.isUserInRole(\"").append(roles[r]).append("\")");
+                }
+                roleCheck.append(") {");
+                out.println(roleCheck);
+                out.println("                return Response.status(403)"
+                        + ".header(\"Content-Type\", \"application/json\")"
+                        + ".body(\"{\\\"error\\\":\\\"Forbidden\\\"}\");");
+                out.println("            }");
+            }
+        }
+
         // Build method call arguments
         StringBuilder args = new StringBuilder();
         for (int i = 0; i < route.params.size(); i++) {
@@ -299,6 +419,9 @@ public class RouteProcessor extends AbstractProcessor {
                     break;
                 case REQUEST:
                     args.append("request");
+                    break;
+                case SECURITY_CONTEXT:
+                    args.append("securityContext");
                     break;
             }
         }
@@ -355,6 +478,22 @@ public class RouteProcessor extends AbstractProcessor {
                 pathMap.computeIfAbsent(openApiPath, k -> new ArrayList<>())
                         .add(new RouteWithTag(route, resource.tagName));
             }
+        }
+
+        // Security schemes (if any route uses security)
+        boolean hasSecuredRoutes = resources.stream()
+                .flatMap(r -> r.methods.stream())
+                .anyMatch(m -> m.security.kind == SecurityKind.ROLES_ALLOWED);
+        if (hasSecuredRoutes) {
+            json.append("  \"components\": {\n");
+            json.append("    \"securitySchemes\": {\n");
+            json.append("      \"bearerAuth\": {\n");
+            json.append("        \"type\": \"http\",\n");
+            json.append("        \"scheme\": \"bearer\",\n");
+            json.append("        \"bearerFormat\": \"JWT\"\n");
+            json.append("      }\n");
+            json.append("    }\n");
+            json.append("  },\n");
         }
 
         json.append("  \"paths\": {\n");
@@ -422,6 +561,13 @@ public class RouteProcessor extends AbstractProcessor {
                     json.append("            }\n");
                     json.append("          }\n");
                     json.append("        },\n");
+                }
+
+                // Security
+                if (route.security.kind == SecurityKind.ROLES_ALLOWED) {
+                    json.append("        \"security\": [{\"bearerAuth\": []}],\n");
+                } else if (route.security.kind == SecurityKind.PERMIT_ALL) {
+                    json.append("        \"security\": [],\n");
                 }
 
                 // Responses
@@ -508,10 +654,15 @@ public class RouteProcessor extends AbstractProcessor {
                                  String tagName, String tagDescription, ApiInfo apiInfo) {}
 
     private record RouteMethod(String httpMethod, String path, String methodName, List<MethodParam> params,
-                               String summary, String description, List<ApiResponseInfo> responses) {}
+                               String summary, String description, List<ApiResponseInfo> responses,
+                               SecurityInfo security) {}
+
+    private record SecurityInfo(SecurityKind kind, String[] roles) {}
+
+    private enum SecurityKind { NONE, PERMIT_ALL, DENY_ALL, ROLES_ALLOWED }
 
     private record MethodParam(Kind kind, String name, String typeName) {
-        enum Kind { PATH, QUERY, BODY, REQUEST }
+        enum Kind { PATH, QUERY, BODY, REQUEST, SECURITY_CONTEXT }
     }
 
     private record ApiResponseInfo(int code, String description, String mediaType) {}
