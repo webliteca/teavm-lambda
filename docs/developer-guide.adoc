@@ -1,0 +1,2823 @@
+= teavm-lambda Developer Guide
+:author: Weblite
+:revnumber: 0.1.0
+:toc: left
+:toclevels: 3
+:sectnums:
+:source-highlighter: rouge
+:icons: font
+:experimental:
+:sectanchors:
+:sectlinks:
+:idprefix:
+:idseparator: -
+:project-version: 0.1.0-SNAPSHOT
+:java-version: 21
+:teavm-version: 0.10.2
+:nodejs-version: 22
+:maven-version: 3.9+
+
+[NOTE]
+.What is teavm-lambda?
+====
+teavm-lambda is a Java framework for building serverless HTTP APIs that deploy to AWS Lambda, Google Cloud Run, and standalone JVM servers.
+Java source code is compiled to JavaScript at build time using TeaVM {teavm-version} and runs on Node.js {nodejs-version}, achieving fast cold starts without a JVM.
+The same application code can also run natively on the JVM with zero code changes.
+====
+
+== What Is teavm-lambda?
+
+teavm-lambda is a lightweight Java framework for building serverless REST APIs.
+It compiles Java {java-version} source code to JavaScript using the https://teavm.org[TeaVM] ahead-of-time compiler and runs the output on Node.js {nodejs-version}.
+This approach combines the developer experience of Java—strong typing, annotation-driven routing, compile-time dependency injection—with the fast cold starts and low memory footprint of a JavaScript runtime.
+
+The framework follows a Write Once Run Anywhere (WORA) architecture.
+Application code written against the platform-neutral API compiles to both JavaScript (for Node.js) and native JVM bytecode without modification.
+Maven profiles control the compilation target, so the same `mvn clean package` command can produce a Lambda deployment package, a Cloud Run Docker image, or a standalone JVM HTTP server.
+
+=== Key Capabilities
+
+* **JAX-RS-style routing** — `@Path`, `@GET`, `@POST`, `@PUT`, `@DELETE`, `@PATCH`, `@HEAD`, `@OPTIONS` annotations for declarative HTTP routing
+* **Compile-time code generation** — annotation processor generates router and dependency injection container at build time with zero runtime reflection
+* **Immutable Request/Response** — thread-safe, fluent builder API for HTTP responses
+* **Dependency injection** — `@Component`, `@Service`, `@Repository`, `@Singleton`, `@Inject` with compile-time wiring
+* **Middleware pipeline** — composable middleware for CORS, compression, health checks, and custom cross-cutting concerns
+* **Database access** — platform-neutral `Database` interface backed by Node.js `pg` driver or JDBC
+* **Cloud services** — unified APIs for NoSQL (DynamoDB, Firestore), object storage (S3, GCS), and message queues (SQS, Pub/Sub)
+* **Security** — JWT validation with `@RolesAllowed`, `@PermitAll`, `@DenyAll` annotations
+* **Validation** — `@NotNull`, `@NotEmpty`, `@Min`, `@Max`, `@Pattern` parameter validation
+* **OpenAPI** — auto-generated OpenAPI 3.0 spec and Swagger UI from annotations
+* **Error handling** — RFC 7807 ProblemDetail for structured error responses
+* **JSON utilities** — lightweight `JsonBuilder` and `JsonReader` with no external dependencies
+* **Multi-platform deployment** — AWS Lambda, Google Cloud Run, and standalone JVM from a single codebase
+
+=== How It Works
+
+The teavm-lambda compilation pipeline transforms Java source code into a deployable serverless function:
+
+....
+Java Source (.java)
+       │
+       ▼
+Annotation Processor (compile-time)
+  ├── GeneratedRouter    — HTTP routing logic
+  └── GeneratedContainer — dependency injection wiring
+       │
+       ▼
+  ┌────┴────────────────────────┐
+  │  TeaVM Profile (default)    │    JVM Profile
+  │  TeaVM Compiler             │    javac + maven-shade
+  │  Java → JavaScript          │    Java → Uber JAR
+  │  teavm-app.js               │    my-app.jar
+  │       │                     │         │
+  │  Node.js 22 runtime         │    JVM 21 runtime
+  │  AWS Lambda / Cloud Run     │    Lambda / Cloud Run / Standalone
+  └─────────────────────────────┘
+....
+
+=== When to Use teavm-lambda
+
+teavm-lambda is a good fit when you want:
+
+* **Java language features** (strong typing, IDE support, refactoring) with **JavaScript runtime performance** (fast cold starts on Lambda)
+* A **lightweight framework** without the overhead of Spring Boot, Quarkus, or Micronaut
+* **Multi-cloud portability** — deploy the same code to AWS Lambda and Google Cloud Run
+* **Compile-time safety** — routing errors and dependency injection problems caught at build time, not runtime
+* **Zero reflection** — the annotation processor generates all routing and DI code ahead of time
+
+.Comparison with other Java serverless frameworks
+[cols="1,1,1,1,1"]
+|===
+| Feature | teavm-lambda | Spring Cloud Function | Quarkus Lambda | Micronaut Lambda
+
+| Cold start
+| ~100ms (Node.js)
+| ~3-8s (JVM)
+| ~1-3s (native)
+| ~1-3s (native)
+
+| Runtime
+| Node.js 22 or JVM
+| JVM
+| JVM or Native
+| JVM or Native
+
+| Reflection
+| None (compile-time)
+| Heavy
+| Minimal (build-time)
+| Minimal (build-time)
+
+| Framework size
+| Lightweight
+| Heavy
+| Medium
+| Medium
+
+| Multi-cloud
+| Lambda + Cloud Run
+| Lambda + Azure + GCP
+| Lambda
+| Lambda + Azure + GCP
+|===
+
+
+== Getting Started
+
+This section walks through creating a teavm-lambda application from scratch, building it, and running it locally.
+
+=== Prerequisites
+
+The following tools are required to build and run teavm-lambda applications:
+
+[cols="1,2"]
+|===
+| Tool | Version
+
+| JDK
+| {java-version} or later (https://adoptium.net[Eclipse Temurin] recommended)
+
+| Apache Maven
+| {maven-version} or later
+
+| Docker
+| Latest stable (for local database and Cloud Run testing)
+
+| Docker Compose
+| V2 (included with Docker Desktop)
+|===
+
+Optional tools depending on your deployment target:
+
+[cols="1,2"]
+|===
+| Tool | Required For
+
+| AWS SAM CLI
+| Local Lambda testing and deployment
+
+| Node.js
+| {nodejs-version} (only if running TeaVM output outside Docker)
+
+| Google Cloud CLI
+| Cloud Run deployment
+|===
+
+=== Your First Application
+
+Create a new Maven project with the following structure:
+
+....
+my-app/
+├── pom.xml
+└── src/main/java/com/example/myapp/
+    ├── Main.java
+    └── HelloResource.java
+....
+
+==== HelloResource.java
+
+The resource class defines HTTP endpoints using JAX-RS-style annotations:
+
+[source,java]
+----
+package com.example.myapp;
+
+import ca.weblite.teavmlambda.api.Response;
+import ca.weblite.teavmlambda.api.annotation.*;
+
+@Path("/hello")
+@Component
+@Singleton
+public class HelloResource {
+
+    @GET
+    public Response hello() {
+        return Response.ok("{\"message\":\"Hello, World!\"}")
+                .header("Content-Type", "application/json");
+    }
+
+    @GET
+    @Path("/{name}")
+    public Response greet(@PathParam("name") String name) {
+        return Response.ok("{\"message\":\"Hello, " + name + "!\"}")
+                .header("Content-Type", "application/json");
+    }
+}
+----
+
+==== Main.java
+
+The entry point creates the dependency injection container, the router, and starts the platform:
+
+[source,java]
+----
+package com.example.myapp;
+
+import ca.weblite.teavmlambda.api.Container;
+import ca.weblite.teavmlambda.api.Platform;
+import ca.weblite.teavmlambda.api.Router;
+import ca.weblite.teavmlambda.generated.GeneratedContainer;
+import ca.weblite.teavmlambda.generated.GeneratedRouter;
+
+public class Main {
+    public static void main(String[] args) {
+        Container container = new GeneratedContainer();
+        Router router = new GeneratedRouter(container);
+        Platform.start(router);
+    }
+}
+----
+
+TIP: `GeneratedContainer` and `GeneratedRouter` are produced by the annotation processor at compile time. You do not write these classes — they are generated from your `@Component`, `@Service`, `@Repository`, and `@Path` annotations.
+
+==== pom.xml (minimal, JVM server profile)
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>my-app</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-core</artifactId>
+            <version>${teavm-lambda.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-adapter-httpserver</artifactId>
+            <version>${teavm-lambda.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>21</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>ca.weblite</groupId>
+                            <artifactId>teavm-lambda-processor</artifactId>
+                            <version>${teavm-lambda.version}</version>
+                        </path>
+                        <path>
+                            <groupId>ca.weblite</groupId>
+                            <artifactId>teavm-lambda-core</artifactId>
+                            <version>${teavm-lambda.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.example.myapp.Main</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+----
+
+==== Build and Run
+
+[source,bash]
+----
+# Build the application
+mvn clean package
+
+# Run locally (listens on port 8080)
+java -jar target/my-app-1.0-SNAPSHOT.jar
+
+# Test
+curl http://localhost:8080/hello
+# {"message":"Hello, World!"}
+
+curl http://localhost:8080/hello/Alice
+# {"message":"Hello, Alice!"}
+----
+
+
+== Project Structure
+
+teavm-lambda is organized as a multi-module Maven project.
+Each module serves a specific purpose and targets either all platforms, Node.js only, or JVM only.
+
+=== Module Reference
+
+.Core Framework
+[cols="2,3,1"]
+|===
+| Module | Purpose | Platform
+
+| `teavm-lambda-core`
+| Core annotations, Request, Response, Router, Container, Middleware, Platform, JSON utilities, ProblemDetail, validation
+| All
+
+| `teavm-lambda-core-js`
+| Node.js SPI implementations (ResourceLoader, etc.)
+| Node.js
+
+| `teavm-lambda-core-jvm`
+| JVM SPI implementations
+| JVM
+
+| `teavm-lambda-processor`
+| JSR 269 annotation processor — generates `GeneratedRouter` and `GeneratedContainer` at compile time
+| Build-time
+|===
+
+.Platform Adapters
+[cols="2,3,1"]
+|===
+| Module | Purpose | Platform
+
+| `teavm-lambda-adapter-lambda`
+| AWS Lambda / API Gateway adapter (TeaVM/JS)
+| Node.js
+
+| `teavm-lambda-adapter-lambda-jvm`
+| AWS Lambda / API Gateway adapter (JVM)
+| JVM
+
+| `teavm-lambda-adapter-cloudrun`
+| Google Cloud Run HTTP server adapter (TeaVM/JS)
+| Node.js
+
+| `teavm-lambda-adapter-httpserver`
+| JDK built-in HttpServer adapter (zero external dependencies)
+| JVM
+|===
+
+.Database
+[cols="2,3,1"]
+|===
+| Module | Purpose | Platform
+
+| `teavm-lambda-db-api`
+| Platform-neutral `Database`, `DbResult`, `DbRow` interfaces
+| All
+
+| `teavm-lambda-db`
+| Node.js `pg` driver wrapper via JSO
+| Node.js
+
+| `teavm-lambda-db-jvm`
+| JDBC-based implementation
+| JVM
+|===
+
+.Cloud Services
+[cols="2,3,1"]
+|===
+| Module | Purpose | Platform
+
+| `teavm-lambda-nosqldb`
+| `NoSqlClient` interface and `NoSqlClientFactory`
+| All
+
+| `teavm-lambda-dynamodb`
+| Amazon DynamoDB provider
+| Node.js
+
+| `teavm-lambda-firestore`
+| Google Cloud Firestore provider
+| Node.js
+
+| `teavm-lambda-objectstore`
+| `ObjectStoreClient` interface and `ObjectStoreClientFactory`
+| All
+
+| `teavm-lambda-s3` / `teavm-lambda-s3-jvm`
+| Amazon S3 provider
+| Node.js / JVM
+
+| `teavm-lambda-gcs` / `teavm-lambda-gcs-jvm`
+| Google Cloud Storage provider
+| Node.js / JVM
+
+| `teavm-lambda-messagequeue`
+| `MessageQueueClient` interface and `MessageQueueClientFactory`
+| All
+
+| `teavm-lambda-sqs` / `teavm-lambda-sqs-jvm`
+| Amazon SQS provider
+| Node.js / JVM
+
+| `teavm-lambda-pubsub` / `teavm-lambda-pubsub-jvm`
+| Google Cloud Pub/Sub provider
+| Node.js / JVM
+|===
+
+.Security, Compression, Logging
+[cols="2,3,1"]
+|===
+| Module | Purpose | Platform
+
+| `teavm-lambda-auth` / `teavm-lambda-auth-jvm`
+| JWT validation
+| Node.js / JVM
+
+| `teavm-lambda-compression` / `teavm-lambda-compression-jvm`
+| HTTP response compression (gzip, deflate)
+| Node.js / JVM
+
+| `teavm-lambda-logging`
+| Structured JSON logging
+| All
+
+| `teavm-lambda-sentry`
+| Sentry error tracking integration
+| All
+|===
+
+=== SPI Symmetry Pattern
+
+teavm-lambda uses a consistent Service Provider Interface (SPI) pattern across all platform-specific functionality.
+Each concern follows the same structure:
+
+....
+API Module (platform-neutral)     JS Module (Node.js)        JVM Module
+─────────────────────────────     ──────────────────         ──────────
+Interface + Factory               Implementation             Implementation
+DatabaseFactory.create()    →     JsDatabase (pg driver) or  JdbcDatabase (JDBC)
+....
+
+This pattern ensures that application code only depends on the API module, while the correct implementation is discovered at runtime via `ServiceLoader`.
+
+
+== Routing and HTTP Methods
+
+Routing in teavm-lambda is defined declaratively using annotations on Java classes and methods.
+The annotation processor scans these annotations at compile time and generates a `GeneratedRouter` class that performs request matching with zero runtime reflection.
+
+=== Defining Routes with @Path
+
+The `@Path` annotation defines URL path segments at both class and method levels.
+Class-level `@Path` sets the base path, and method-level `@Path` appends additional segments.
+
+[source,java]
+----
+@Path("/users")       // Base path: /users
+@Component
+@Singleton
+public class UsersResource {
+
+    @GET                  // Handles: GET /users
+    public Response list() { ... }
+
+    @GET
+    @Path("/{id}")        // Handles: GET /users/{id}
+    public Response getById(@PathParam("id") String id) { ... }
+
+    @POST                 // Handles: POST /users
+    public Response create(@Body String body) { ... }
+
+    @DELETE
+    @Path("/{id}")        // Handles: DELETE /users/{id}
+    public Response delete(@PathParam("id") String id) { ... }
+}
+----
+
+=== HTTP Method Annotations
+
+teavm-lambda supports all standard HTTP methods:
+
+[cols="1,2"]
+|===
+| Annotation | HTTP Method
+
+| `@GET` | GET — retrieve resources
+| `@POST` | POST — create resources
+| `@PUT` | PUT — replace resources
+| `@DELETE` | DELETE — remove resources
+| `@PATCH` | PATCH — partially update resources
+| `@HEAD` | HEAD — retrieve headers only
+| `@OPTIONS` | OPTIONS — describe communication options
+|===
+
+Each annotation targets `ElementType.METHOD` and marks a method as handling the corresponding HTTP method.
+
+=== Parameter Binding
+
+teavm-lambda provides four annotations for binding request data to method parameters:
+
+==== @PathParam
+
+Binds a path variable to a method parameter.
+The annotation value must match a `{placeholder}` in the `@Path` template.
+
+[source,java]
+----
+@GET
+@Path("/{id}")
+public Response getUser(@PathParam("id") String id) {
+    // id contains the value from the URL path
+}
+----
+
+==== @QueryParam
+
+Binds a query string parameter to a method parameter.
+
+[source,java]
+----
+@GET
+public Response search(@QueryParam("q") String query,
+                       @QueryParam("limit") String limit) {
+    // GET /search?q=hello&limit=10
+}
+----
+
+==== @HeaderParam
+
+Binds an HTTP request header to a method parameter.
+Header matching is case-insensitive.
+
+[source,java]
+----
+@GET
+public Response list(@HeaderParam("X-Request-Id") String requestId) {
+    Response response = Response.ok(data);
+    if (requestId != null) {
+        response = response.header("X-Request-Id", requestId);
+    }
+    return response;
+}
+----
+
+==== @Body
+
+Binds the entire request body as a string to a method parameter.
+
+[source,java]
+----
+@POST
+public Response create(@Body String body) {
+    // body contains the raw request body
+    CreateUserRequest request = CreateUserRequest.fromJson(body);
+    // ...
+}
+----
+
+=== How the GeneratedRouter Works
+
+The `GeneratedRouter` class is produced by the `RouteProcessor` annotation processor during compilation.
+It contains an `if-else` chain that matches incoming requests by HTTP method and path segments.
+No reflection, no route table lookups—just generated Java code that directly invokes your resource methods.
+
+The generated router also:
+
+* Extracts path parameters into a `Map<String, String>`
+* Reads query parameters and headers as specified by `@QueryParam` and `@HeaderParam`
+* Applies validation checks for `@NotNull`, `@NotEmpty`, `@Min`, `@Max`, `@Pattern`
+* Enforces security constraints from `@RolesAllowed`, `@PermitAll`, `@DenyAll`
+* Serves the OpenAPI spec at `GET /openapi.json` and Swagger UI at `GET /swagger-ui`
+
+
+== Request and Response
+
+The `Request` and `Response` classes are immutable value objects that represent HTTP requests and responses.
+Immutability makes them inherently thread-safe and enables a functional programming style.
+
+=== The Request Object
+
+`Request` provides read-only access to all parts of an HTTP request:
+
+[source,java]
+----
+public final class Request {
+    String getMethod()                    // HTTP method: "GET", "POST", etc.
+    String getPath()                      // Request path: "/users/42"
+    Map<String, String> getHeaders()      // Immutable headers map
+    Map<String, String> getQueryParams()  // Immutable query parameters
+    Map<String, String> getPathParams()   // Immutable path parameters
+    String getBody()                      // Request body as string (may be null)
+
+    Request withPathParams(Map<String, String> pathParams)  // Returns new Request
+}
+----
+
+All maps returned by `Request` are unmodifiable.
+The `withPathParams` method returns a new `Request` instance with different path parameters — the original is unchanged.
+
+=== The Response Object
+
+`Response` uses an immutable builder pattern.
+Every method that modifies the response returns a *new* `Response` instance:
+
+[source,java]
+----
+// 200 OK with body
+Response.ok("{\"status\":\"healthy\"}")
+
+// Custom status code
+Response.status(201)
+
+// Chaining headers and body
+Response.status(201)
+    .header("Content-Type", "application/json")
+    .header("Location", "/users/42")
+    .body("{\"id\":42,\"name\":\"Alice\"}")
+
+// 204 No Content (no body)
+Response.status(204)
+----
+
+.Response API
+[cols="2,3"]
+|===
+| Method | Description
+
+| `Response.ok(String body)`
+| Creates a 200 OK response with the given body
+
+| `Response.status(int code)`
+| Creates a response with the given status code and no body
+
+| `.header(String name, String value)`
+| Returns a new Response with the header added
+
+| `.body(String body)`
+| Returns a new Response with the body set
+
+| `.getStatusCode()`
+| Returns the HTTP status code
+
+| `.getHeaders()`
+| Returns an unmodifiable map of response headers
+
+| `.getBody()`
+| Returns the response body (may be null)
+|===
+
+
+== Dependency Injection
+
+teavm-lambda includes a lightweight, compile-time dependency injection (DI) container.
+The annotation processor analyzes `@Component`, `@Service`, and `@Repository` annotations and generates a `GeneratedContainer` class that wires all dependencies without runtime reflection.
+
+=== Stereotype Annotations
+
+Three stereotype annotations mark classes as managed components:
+
+[cols="1,3"]
+|===
+| Annotation | Semantic Meaning
+
+| `@Component`
+| General-purpose managed component
+
+| `@Service`
+| Business logic layer component
+
+| `@Repository`
+| Data access layer component
+|===
+
+All three are functionally equivalent — they register the class with the DI container.
+The semantic distinction improves code readability and follows standard layered architecture conventions.
+
+=== Scoping with @Singleton
+
+By default, the container creates a new instance each time a component is requested.
+The `@Singleton` annotation ensures only one instance is created and shared across all injection points:
+
+[source,java]
+----
+@Service
+@Singleton
+public class UserService {
+    // One instance shared across all consumers
+}
+----
+
+=== Constructor Injection with @Inject
+
+The `@Inject` annotation marks which constructor the container should use for dependency resolution.
+All constructor parameters are resolved from the container:
+
+[source,java]
+----
+@Repository
+@Singleton
+public class UserRepository {
+
+    private final Database db;
+
+    @Inject
+    public UserRepository(Database db) {
+        this.db = db;
+    }
+
+    public List<User> findAll() {
+        DbResult result = db.query("SELECT id, name, email FROM users ORDER BY id");
+        // ...
+    }
+}
+----
+
+[source,java]
+----
+@Service
+@Singleton
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    @Inject
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+}
+----
+
+The annotation processor performs topological sorting of dependencies and detects circular dependencies at compile time.
+
+=== The Container Class
+
+The `Container` class provides manual registration and retrieval of dependencies:
+
+[source,java]
+----
+public class Container {
+    <T> void register(Class<T> type, T instance)              // Register an instance
+    <T> void register(Class<T> type, Factory<T> factory)      // Register a factory
+    <T> void registerSingleton(Class<T> type, Factory<T> factory) // Register with lazy caching
+    <T> T get(Class<T> type)                                  // Retrieve an instance
+    boolean has(Class<?> type)                                // Check if binding exists
+}
+----
+
+=== Registering External Dependencies
+
+External dependencies (such as database connections) that are not annotated with `@Component` must be registered manually before creating the router:
+
+[source,java]
+----
+public class Main {
+    public static void main(String[] args) {
+        String dbUrl = Platform.env("DATABASE_URL",
+                "postgresql://demo:demo@localhost:5432/demo");
+
+        Container container = new GeneratedContainer();
+        container.register(Database.class, DatabaseFactory.create(dbUrl));
+
+        Router router = new GeneratedRouter(container);
+        Platform.start(router);
+    }
+}
+----
+
+IMPORTANT: Register external dependencies on the `Container` instance *before* passing it to `GeneratedRouter`.
+The generated router resolves resource class dependencies during construction.
+
+
+== JSON Utilities
+
+teavm-lambda provides lightweight, dependency-free JSON utilities for building and parsing JSON strings.
+These utilities have no external dependencies and are compatible with both TeaVM and JVM runtimes.
+
+=== JsonBuilder — Fluent JSON Construction
+
+`JsonBuilder` constructs JSON objects and arrays using a fluent API:
+
+[source,java]
+----
+// Build a JSON object
+String json = JsonBuilder.object()
+    .put("id", 42)
+    .put("name", "Alice")
+    .put("email", "alice@example.com")
+    .put("active", true)
+    .put("score", 95.5)
+    .build();
+// {"id":42,"name":"Alice","email":"alice@example.com","active":true,"score":95.5}
+----
+
+[source,java]
+----
+// Nested objects using putRaw
+String json = JsonBuilder.object()
+    .put("user", "Alice")
+    .putRaw("address", JsonBuilder.object()
+        .put("city", "Toronto")
+        .put("country", "Canada")
+        .build())
+    .build();
+// {"user":"Alice","address":{"city":"Toronto","country":"Canada"}}
+----
+
+[source,java]
+----
+// Build a JSON array
+String json = JsonBuilder.array()
+    .add("{\"id\":1,\"name\":\"Alice\"}")
+    .add("{\"id\":2,\"name\":\"Bob\"}")
+    .build();
+// [{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]
+----
+
+.JsonBuilder Methods
+[cols="2,3"]
+|===
+| Method | Description
+
+| `JsonBuilder.object()`
+| Creates a new JSON object builder
+
+| `JsonBuilder.array()`
+| Creates a new JSON array builder
+
+| `.put(String key, String value)`
+| Adds a string field (auto-escapes quotes)
+
+| `.put(String key, int value)`
+| Adds an integer field
+
+| `.put(String key, long value)`
+| Adds a long field
+
+| `.put(String key, double value)`
+| Adds a double field
+
+| `.put(String key, boolean value)`
+| Adds a boolean field
+
+| `.putRaw(String key, String rawJson)`
+| Adds a pre-serialized JSON value (no quoting)
+
+| `.add(String rawJson)`
+| Adds a raw JSON element to an array
+
+| `.addString(String value)`
+| Adds a quoted string element to an array
+
+| `.build()`
+| Returns the completed JSON string
+|===
+
+=== JsonReader — Lightweight JSON Parsing
+
+`JsonReader` parses a JSON string and provides typed accessors:
+
+[source,java]
+----
+JsonReader reader = JsonReader.parse("{\"name\":\"Alice\",\"age\":30,\"active\":true}");
+
+String name = reader.getString("name");              // "Alice"
+String missing = reader.getString("phone");           // null
+String fallback = reader.getString("phone", "N/A");   // "N/A"
+int age = reader.getInt("age", 0);                    // 30
+double score = reader.getDouble("score", 0.0);        // 0.0
+boolean active = reader.getBoolean("active", false);  // true
+boolean exists = reader.has("name");                  // true
+----
+
+.JsonReader Methods
+[cols="2,3"]
+|===
+| Method | Description
+
+| `JsonReader.parse(String json)`
+| Parses a JSON string and returns a `JsonReader`
+
+| `.getString(String key)`
+| Returns the string value or null
+
+| `.getString(String key, String defaultValue)`
+| Returns the string value or the default
+
+| `.getInt(String key, int defaultValue)`
+| Returns an integer value or the default
+
+| `.getDouble(String key, double defaultValue)`
+| Returns a double value or the default
+
+| `.getBoolean(String key, boolean defaultValue)`
+| Returns a boolean value or the default
+
+| `.has(String key)`
+| Returns true if the key exists
+|===
+
+
+== Database Access
+
+teavm-lambda provides a platform-neutral database interface for PostgreSQL.
+On Node.js, it wraps the `pg` driver via TeaVM JSO interop.
+On JVM, it uses standard JDBC.
+Application code uses the same `Database` API regardless of runtime.
+
+=== Creating a Database Connection
+
+Use `DatabaseFactory.create()` with a PostgreSQL connection URL:
+
+[source,java]
+----
+Database db = DatabaseFactory.create("postgresql://user:password@host:5432/mydb");
+----
+
+The connection URL is typically read from an environment variable:
+
+[source,java]
+----
+String dbUrl = Platform.env("DATABASE_URL",
+        "postgresql://demo:demo@localhost:5432/demo");
+Database db = DatabaseFactory.create(dbUrl);
+----
+
+=== Executing Queries
+
+The `Database` interface provides two query methods:
+
+[source,java]
+----
+// Simple query (no parameters)
+DbResult result = db.query("SELECT id, name, email FROM users ORDER BY id");
+
+// Parameterized query (prevents SQL injection)
+DbResult result = db.query(
+    "SELECT id, name, email FROM users WHERE id = $1", id);
+
+// Insert with RETURNING clause
+DbResult result = db.query(
+    "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email",
+    name, email);
+----
+
+IMPORTANT: Always use parameterized queries with `$1`, `$2`, `$3` placeholders to prevent SQL injection.
+Never concatenate user input into SQL strings.
+
+=== Reading Results
+
+`DbResult` and `DbRow` provide access to query results:
+
+[source,java]
+----
+DbResult result = db.query("SELECT id, name, email FROM users");
+
+// Row count
+int count = result.getRowCount();
+
+// Iterate rows
+for (int i = 0; i < result.getRowCount(); i++) {
+    DbRow row = result.getRows().get(i);
+    String name = row.getString("name");
+    int id = row.getInt("id");
+    boolean active = row.getBoolean("active");
+
+    // Check for null/missing columns
+    if (row.has("phone") && !row.isNull("phone")) {
+        String phone = row.getString("phone");
+    }
+}
+
+// Serialize all rows as JSON
+String json = result.toJsonArray();
+// [{"id":1,"name":"Alice","email":"alice@example.com"}, ...]
+----
+
+.Database API
+[cols="2,3"]
+|===
+| Method | Description
+
+| `db.query(String sql)`
+| Execute a query without parameters
+
+| `db.query(String sql, String... params)`
+| Execute a parameterized query
+
+| `db.close()`
+| Close the database connection
+
+| `result.getRows()`
+| Returns `List<DbRow>`
+
+| `result.getRowCount()`
+| Returns number of rows
+
+| `result.toJsonArray()`
+| Serializes all rows as a JSON array
+
+| `row.getString(column)`
+| Get string value
+
+| `row.getInt(column)`
+| Get integer value
+
+| `row.getDouble(column)`
+| Get double value
+
+| `row.getBoolean(column)`
+| Get boolean value
+
+| `row.has(column)`
+| Check if column exists
+
+| `row.isNull(column)`
+| Check if value is null
+
+| `row.toJson()`
+| Serialize row as JSON object
+|===
+
+=== The Repository Pattern
+
+teavm-lambda encourages the repository pattern for data access.
+Annotate your repository class with `@Repository` and `@Singleton`, and inject the `Database` interface:
+
+[source,java]
+----
+@Repository
+@Singleton
+public class UserRepository {
+
+    private final Database db;
+
+    @Inject
+    public UserRepository(Database db) {
+        this.db = db;
+    }
+
+    public List<User> findAll() {
+        DbResult result = db.query(
+            "SELECT id, name, email FROM users ORDER BY id");
+        List<User> users = new ArrayList<>();
+        for (int i = 0; i < result.getRowCount(); i++) {
+            users.add(User.fromRow(result.getRows().get(i)));
+        }
+        return users;
+    }
+
+    public User findById(String id) {
+        DbResult result = db.query(
+            "SELECT id, name, email FROM users WHERE id = $1", id);
+        if (result.getRowCount() == 0) {
+            return null;
+        }
+        return User.fromRow(result.getRows().get(0));
+    }
+
+    public User create(String name, String email) {
+        DbResult result = db.query(
+            "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email",
+            name, email);
+        return User.fromRow(result.getRows().get(0));
+    }
+
+    public boolean deleteById(String id) {
+        DbResult result = db.query(
+            "DELETE FROM users WHERE id = $1 RETURNING id", id);
+        return result.getRowCount() > 0;
+    }
+}
+----
+
+
+== Middleware
+
+Middleware in teavm-lambda provides a composable pipeline for cross-cutting concerns such as CORS, compression, health checks, logging, and authentication.
+Each middleware component can inspect or modify both the request and response.
+
+=== The Middleware Interface
+
+The `Middleware` interface is a functional interface with a single method:
+
+[source,java]
+----
+@FunctionalInterface
+public interface Middleware {
+    Response handle(Request request, MiddlewareChain chain);
+}
+----
+
+A middleware either:
+
+1. Calls `chain.next(request)` to delegate to the next middleware (or the final router)
+2. Returns a `Response` directly, short-circuiting the chain
+
+=== Building the Middleware Pipeline
+
+Use `MiddlewareRouter` to wrap a router with a chain of middleware:
+
+[source,java]
+----
+Router router = new MiddlewareRouter(new GeneratedRouter(container))
+    .use(health)                               // Health check endpoints
+    .use(CorsMiddleware.builder().build())      // CORS headers
+    .use(new CompressionMiddleware());          // Response compression
+----
+
+Middleware executes in the order added.
+Each middleware wraps the next, forming a chain:
+
+....
+Request → Health → CORS → Compression → GeneratedRouter → Response
+....
+
+=== CorsMiddleware
+
+`CorsMiddleware` handles CORS (Cross-Origin Resource Sharing) by responding to preflight `OPTIONS` requests and adding CORS headers to all responses.
+It uses a builder pattern with sensible defaults:
+
+[source,java]
+----
+CorsMiddleware cors = CorsMiddleware.builder()
+    .allowOrigin("https://example.com")    // Default: "*"
+    .allowMethods("GET", "POST", "PUT")    // Default: all standard methods
+    .allowHeaders("Content-Type", "Authorization")  // Default: Content-Type, Authorization, X-Request-Id
+    .allowCredentials(true)                // Default: false
+    .maxAge(3600)                          // Default: 86400
+    .build();
+----
+
+.CorsMiddleware Builder Defaults
+[cols="2,2,3"]
+|===
+| Property | Default | Description
+
+| `allowOrigin`
+| `"*"`
+| Allowed origin(s)
+
+| `allowMethods`
+| `"GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD"`
+| Allowed HTTP methods
+
+| `allowHeaders`
+| `"Content-Type, Authorization, X-Request-Id"`
+| Allowed request headers
+
+| `allowCredentials`
+| `false`
+| Whether to allow credentials
+
+| `maxAge`
+| `86400`
+| Preflight cache duration in seconds
+|===
+
+=== CompressionMiddleware
+
+`CompressionMiddleware` compresses response bodies based on the client's `Accept-Encoding` header.
+It supports gzip and deflate encodings:
+
+[source,java]
+----
+Router router = new MiddlewareRouter(innerRouter)
+    .use(new CompressionMiddleware());
+----
+
+Compression is applied only when:
+
+* The response body is longer than 256 bytes
+* The `Content-Type` is text-based (e.g., `application/json`, `text/html`)
+* The client sends an `Accept-Encoding` header containing `gzip` or `deflate`
+
+The middleware automatically sets the `Content-Encoding` and `Vary` response headers.
+
+=== HealthEndpoint
+
+`HealthEndpoint` is a middleware that provides health check endpoints for load balancers and orchestrators.
+It intercepts three paths:
+
+* `GET /health` — overall health status
+* `GET /health/ready` — readiness probe
+* `GET /health/live` — liveness probe
+
+[source,java]
+----
+HealthEndpoint health = new HealthEndpoint()
+    .add("database", () -> {
+        try {
+            db.query("SELECT 1");
+            return HealthResult.up();
+        } catch (Exception e) {
+            return HealthResult.down(e);
+        }
+    });
+
+Router router = new MiddlewareRouter(innerRouter)
+    .use(health);
+----
+
+The response is JSON with per-check results.
+Returns HTTP 200 if all checks pass, HTTP 503 if any check fails:
+
+[source,json]
+----
+{
+  "status": "UP",
+  "checks": {
+    "database": { "status": "UP" }
+  }
+}
+----
+
+=== Writing Custom Middleware
+
+To create custom middleware, implement the `Middleware` interface:
+
+[source,java]
+----
+public class LoggingMiddleware implements Middleware {
+
+    @Override
+    public Response handle(Request request, MiddlewareChain chain) {
+        long start = System.currentTimeMillis();
+
+        // Delegate to next middleware or router
+        Response response = chain.next(request);
+
+        long duration = System.currentTimeMillis() - start;
+        System.out.println(request.getMethod() + " " + request.getPath()
+            + " -> " + response.getStatusCode() + " (" + duration + "ms)");
+
+        return response;
+    }
+}
+----
+
+=== Middleware Execution Order
+
+Middleware components execute in the order they are added to `MiddlewareRouter`.
+The first middleware added is the outermost wrapper:
+
+[source,java]
+----
+new MiddlewareRouter(router)
+    .use(loggingMiddleware)     // 1st: sees raw request, final response
+    .use(corsMiddleware)        // 2nd: adds CORS headers
+    .use(compressionMiddleware) // 3rd: compresses response
+----
+
+
+== Validation
+
+teavm-lambda provides annotation-based parameter validation that is enforced automatically by the generated router.
+Validation annotations are applied to method parameters and checked before the method body executes.
+
+=== Validation Annotations
+
+[cols="2,2,3"]
+|===
+| Annotation | Parameters | Description
+
+| `@NotNull`
+| `message` (default: `"must not be null"`)
+| Validates the parameter is not null
+
+| `@NotEmpty`
+| `message` (default: `"must not be empty"`)
+| Validates a string is not null and not empty
+
+| `@Min`
+| `value` (long), `message`
+| Validates a numeric value meets a minimum (parses string to long)
+
+| `@Max`
+| `value` (long), `message`
+| Validates a numeric value does not exceed a maximum
+
+| `@Pattern`
+| `value` (regex), `message`
+| Validates a string matches a regular expression
+|===
+
+[source,java]
+----
+@POST
+public Response create(
+        @NotNull @Body String body,
+        @QueryParam("priority") @Min(value = 1, message = "priority must be at least 1")
+                                @Max(value = 5, message = "priority must be at most 5")
+                                String priority) {
+    // Only reached if validation passes
+}
+----
+
+When validation fails, the generated router returns a `400 Bad Request` response with validation error details.
+
+=== ValidationResult for Manual Validation
+
+For complex validation logic beyond annotations, use `ValidationResult`:
+
+[source,java]
+----
+@POST
+public Response create(@Body String body) {
+    JsonReader reader = JsonReader.parse(body);
+    String name = reader.getString("name");
+    String email = reader.getString("email");
+
+    ValidationResult validation = new ValidationResult();
+    if (name == null || name.isEmpty()) {
+        validation.addError("name", "must not be empty");
+    }
+    if (email == null || !email.contains("@")) {
+        validation.addError("email", "must be a valid email address");
+    }
+    if (!validation.isValid()) {
+        return validation.toResponse(); // 400 with JSON error details
+    }
+
+    // Proceed with valid data
+}
+----
+
+The `validation.toResponse()` method returns a 400 response with JSON body:
+
+[source,json]
+----
+{
+  "errors": [
+    { "field": "name", "message": "must not be empty" },
+    { "field": "email", "message": "must be a valid email address" }
+  ]
+}
+----
+
+
+== Error Handling
+
+teavm-lambda provides `ProblemDetail` for structured error responses following the https://datatracker.ietf.org/doc/html/rfc7807[RFC 7807] standard.
+This ensures consistent, machine-readable error responses across your API.
+
+=== ProblemDetail (RFC 7807)
+
+`ProblemDetail` creates standardized error responses with a `Content-Type` of `application/problem+json`:
+
+[source,java]
+----
+// Convenience factory methods
+ProblemDetail.badRequest("name is required").toResponse();      // 400
+ProblemDetail.notFound("User not found").toResponse();          // 404
+ProblemDetail.conflict("Email already exists").toResponse();    // 409
+ProblemDetail.internalError("Unexpected error").toResponse();   // 500
+
+// Custom status code
+ProblemDetail.of(422, "Unprocessable entity").toResponse();
+
+// With custom type and instance URIs
+ProblemDetail.notFound("User 42 not found")
+    .type("https://api.example.com/errors/user-not-found")
+    .instance("/users/42")
+    .toResponse();
+----
+
+Response body format:
+
+[source,json]
+----
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "User not found"
+}
+----
+
+.ProblemDetail API
+[cols="2,3"]
+|===
+| Method | Description
+
+| `ProblemDetail.of(int status, String detail)`
+| Creates a ProblemDetail with custom status
+
+| `ProblemDetail.badRequest(String detail)`
+| Creates a 400 Bad Request
+
+| `ProblemDetail.notFound(String detail)`
+| Creates a 404 Not Found
+
+| `ProblemDetail.conflict(String detail)`
+| Creates a 409 Conflict
+
+| `ProblemDetail.internalError(String detail)`
+| Creates a 500 Internal Server Error
+
+| `.type(String uri)`
+| Sets a custom problem type URI
+
+| `.instance(String uri)`
+| Sets the problem instance URI
+
+| `.toJson()`
+| Returns the RFC 7807 JSON string
+
+| `.toResponse()`
+| Returns a `Response` with `application/problem+json` content type
+|===
+
+=== Error Response Patterns
+
+A typical resource class combines `ProblemDetail` for errors and `Response` for success:
+
+[source,java]
+----
+@GET
+@Path("/{id}")
+public Response getById(@PathParam("id") String id) {
+    Item item = service.getItem(id);
+    if (item == null) {
+        return ProblemDetail.notFound(
+            "Item with id " + id + " was not found").toResponse();
+    }
+    return Response.ok(item.toJson())
+            .header("Content-Type", "application/json");
+}
+----
+
+
+== Security and JWT Authentication
+
+teavm-lambda provides declarative security through annotations and JWT (JSON Web Token) validation.
+Security constraints are enforced by the generated router, which extracts the Bearer token from the `Authorization` header and validates it before invoking the resource method.
+
+=== Setting Up JWT Validation
+
+JWT validation requires configuring environment variables:
+
+[cols="2,3,1"]
+|===
+| Variable | Description | Required
+
+| `JWT_SECRET`
+| HMAC secret key (for HS256, HS384, HS512 algorithms)
+| One of SECRET or PUBLIC_KEY
+
+| `JWT_PUBLIC_KEY`
+| PEM-encoded public key (for RS256, ES256 algorithms)
+| One of SECRET or PUBLIC_KEY
+
+| `JWT_ISSUER`
+| Expected issuer (`iss` claim) for validation
+| No
+
+| `JWT_ALGORITHM`
+| Algorithm name
+| No (default: HS256)
+|===
+
+The `JwtValidator` is created via `JwtValidatorFactory`:
+
+[source,java]
+----
+JwtValidator validator = JwtValidatorFactory.create(); // Reads from env vars
+----
+
+=== Security Annotations
+
+Three annotations control access to resource classes and methods:
+
+==== @RolesAllowed
+
+Restricts access to users with specific roles.
+Roles are extracted from the `groups` claim in the JWT:
+
+[source,java]
+----
+@Path("/admin")
+@Component
+@RolesAllowed({"admin"})  // Class-level: all methods require "admin" role
+public class AdminResource {
+
+    @GET
+    public Response dashboard() { ... }  // Requires "admin" role
+
+    @GET
+    @Path("/users")
+    @RolesAllowed({"admin", "manager"})  // Method-level overrides class-level
+    public Response listUsers() { ... }  // Requires "admin" or "manager"
+}
+----
+
+==== @PermitAll
+
+Allows access to all users, even without a valid JWT.
+Useful for overriding class-level restrictions on specific methods:
+
+[source,java]
+----
+@Path("/api")
+@RolesAllowed({"user"})   // Class-level: require "user" role
+public class ApiResource {
+
+    @GET
+    @Path("/status")
+    @PermitAll              // Override: allow everyone
+    public Response status() { ... }
+}
+----
+
+==== @DenyAll
+
+Denies all access and returns 403 Forbidden:
+
+[source,java]
+----
+@DELETE
+@Path("/system")
+@DenyAll
+public Response deleteSystem() { ... }  // Always returns 403
+----
+
+=== Accessing SecurityContext
+
+Declare a `SecurityContext` parameter in your resource method to access the authenticated user's information:
+
+[source,java]
+----
+@GET
+@Path("/me")
+@RolesAllowed({"user"})
+public Response currentUser(SecurityContext ctx) {
+    String userId = ctx.getSubject();        // JWT "sub" claim
+    String name = ctx.getName();             // "upn" or "preferred_username" or "sub"
+    Set<String> roles = ctx.getRoles();      // JWT "groups" claim
+    boolean isAdmin = ctx.isUserInRole("admin");
+    String email = ctx.getClaim("email");    // Any custom claim
+
+    return Response.ok(JsonBuilder.object()
+        .put("sub", userId)
+        .put("name", name)
+        .put("admin", isAdmin)
+        .build())
+        .header("Content-Type", "application/json");
+}
+----
+
+=== Error Responses
+
+The generated router returns standard error responses for security violations:
+
+* **401 Unauthorized** — missing or invalid JWT token
+* **403 Forbidden** — valid token but insufficient roles (or `@DenyAll`)
+
+
+== OpenAPI and Swagger UI
+
+teavm-lambda automatically generates an OpenAPI 3.0.3 specification and Swagger UI from annotations on your resource classes.
+The generated router serves these at built-in endpoints without any additional configuration.
+
+=== Documentation Annotations
+
+[cols="2,2,3"]
+|===
+| Annotation | Target | Description
+
+| `@ApiInfo(title, version, description)`
+| Class
+| Defines the OpenAPI info section (title, version, description)
+
+| `@ApiTag(value, description)`
+| Class
+| Groups endpoints under a tag in the spec and Swagger UI
+
+| `@ApiOperation(summary, description)`
+| Method
+| Documents an individual API operation
+
+| `@ApiResponse(code, description, mediaType)`
+| Method (repeatable)
+| Documents a possible response code and its meaning
+|===
+
+=== Example: Fully Annotated Resource
+
+[source,java]
+----
+@Path("/items")
+@Component
+@Singleton
+@ApiTag(value = "Items", description = "Item management endpoints")
+@ApiInfo(title = "My API", version = "1.0.0",
+        description = "REST API built with teavm-lambda")
+public class ItemsResource {
+
+    @GET
+    @ApiOperation(summary = "List all items",
+                  description = "Returns a JSON array of all items")
+    @ApiResponse(code = 200, description = "List of items",
+                 mediaType = "application/json")
+    public Response list() { ... }
+
+    @POST
+    @ApiOperation(summary = "Create a new item")
+    @ApiResponse(code = 201, description = "Item created",
+                 mediaType = "application/json")
+    @ApiResponse(code = 400, description = "Validation error")
+    public Response create(@NotNull @Body String body) { ... }
+}
+----
+
+=== Auto-Generated Endpoints
+
+The generated router automatically registers two endpoints:
+
+[cols="1,3"]
+|===
+| Endpoint | Description
+
+| `GET /openapi.json`
+| Returns the OpenAPI 3.0.3 specification as JSON
+
+| `GET /swagger-ui`
+| Returns an HTML page with the embedded Swagger UI
+|===
+
+No additional configuration is needed — these endpoints are available as soon as you use any `@Api*` annotation.
+
+
+== NoSQL Databases
+
+teavm-lambda provides a platform-neutral `NoSqlClient` interface for document-oriented databases.
+The interface abstracts over Amazon DynamoDB and Google Cloud Firestore, allowing the same application code to target either backend.
+
+=== NoSqlClient Interface
+
+[source,java]
+----
+public interface NoSqlClient {
+    String get(String collection, String id);
+    void put(String collection, String id, String json);
+    void delete(String collection, String id);
+    List<String> query(String collection, String field, String operator, String value);
+    List<String> list(String collection);
+}
+----
+
+=== Creating a NoSQL Client
+
+Use `NoSqlClientFactory.create()` with a connection URI.
+The URI scheme determines which provider is used:
+
+[source,java]
+----
+// Amazon DynamoDB
+NoSqlClient client = NoSqlClientFactory.create("dynamodb://us-east-1");
+
+// DynamoDB Local (for development)
+NoSqlClient client = NoSqlClientFactory.create("dynamodb://localhost:8000");
+
+// DynamoDB with table name prefix
+NoSqlClient client = NoSqlClientFactory.create("dynamodb://us-east-1/myapp-");
+
+// Google Cloud Firestore
+NoSqlClient client = NoSqlClientFactory.create("firestore://my-project-id");
+----
+
+=== CRUD Operations
+
+[source,java]
+----
+NoSqlClient client = NoSqlClientFactory.create(Platform.env("NOSQL_URI"));
+
+// Create or update a document
+client.put("users", "user-42", JsonBuilder.object()
+    .put("name", "Alice")
+    .put("email", "alice@example.com")
+    .build());
+
+// Read a document
+String json = client.get("users", "user-42");
+JsonReader reader = JsonReader.parse(json);
+String name = reader.getString("name");
+
+// Delete a document
+client.delete("users", "user-42");
+
+// List all documents in a collection
+List<String> allUsers = client.list("users");
+
+// Query with conditions
+List<String> results = client.query("users", "name", "=", "Alice");
+----
+
+Supported query operators: `=`, `<`, `>`, `\<=`, `>=`, `begins_with`
+
+=== Module Dependencies
+
+Add the API module and the appropriate provider to your `pom.xml`:
+
+[source,xml]
+----
+<!-- API (always required) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-nosqldb</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- DynamoDB provider (choose one) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-dynamodb</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR Firestore provider -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-firestore</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+----
+
+
+== Object Storage
+
+teavm-lambda provides a platform-neutral `ObjectStoreClient` interface for blob/object storage.
+The interface abstracts over Amazon S3 and Google Cloud Storage (GCS).
+
+=== ObjectStoreClient Interface
+
+[source,java]
+----
+public interface ObjectStoreClient {
+    void putObject(String bucket, String key, String data, String contentType);
+    String getObject(String bucket, String key);
+    void deleteObject(String bucket, String key);
+    List<String> listObjects(String bucket, String prefix);
+    boolean objectExists(String bucket, String key);
+}
+----
+
+=== Creating an Object Store Client
+
+[source,java]
+----
+// Amazon S3
+ObjectStoreClient client = ObjectStoreClientFactory.create("s3://us-east-1");
+
+// MinIO (S3-compatible, for local development)
+ObjectStoreClient client = ObjectStoreClientFactory.create("s3://localhost:9000");
+
+// Google Cloud Storage
+ObjectStoreClient client = ObjectStoreClientFactory.create("gcs://my-project-id");
+----
+
+=== Uploading and Downloading Objects
+
+[source,java]
+----
+ObjectStoreClient store = ObjectStoreClientFactory.create(Platform.env("OBJECT_STORE_URI"));
+
+// Upload
+store.putObject("my-bucket", "docs/report.json",
+    "{\"title\":\"Q4 Report\"}", "application/json");
+
+// Download
+String content = store.getObject("my-bucket", "docs/report.json");
+
+// Check existence
+boolean exists = store.objectExists("my-bucket", "docs/report.json");
+
+// List objects with prefix
+List<String> keys = store.listObjects("my-bucket", "docs/");
+
+// Delete
+store.deleteObject("my-bucket", "docs/report.json");
+----
+
+=== Module Dependencies
+
+[source,xml]
+----
+<!-- API (always required) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-objectstore</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- S3 provider (Node.js) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-s3</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR S3 provider (JVM) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-s3-jvm</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR GCS provider (Node.js) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-gcs</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR GCS provider (JVM) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-gcs-jvm</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+----
+
+
+== Message Queues
+
+teavm-lambda provides a platform-neutral `MessageQueueClient` interface for asynchronous messaging.
+The interface abstracts over Amazon SQS and Google Cloud Pub/Sub.
+
+=== MessageQueueClient Interface
+
+[source,java]
+----
+public interface MessageQueueClient {
+    void sendMessage(String queueUrl, String messageBody);
+    List<Message> receiveMessages(String queueUrl, int maxMessages);
+    void deleteMessage(String queueUrl, String receiptHandle);
+    int getMessageCount(String queueUrl);
+}
+----
+
+Each received `Message` contains:
+
+* `getMessageId()` — unique message identifier
+* `getBody()` — message body as a string
+* `getReceiptHandle()` — handle used to delete/acknowledge the message
+
+=== Creating a Message Queue Client
+
+[source,java]
+----
+// Amazon SQS
+MessageQueueClient client = MessageQueueClientFactory.create("sqs://us-east-1");
+
+// ElasticMQ (SQS-compatible, for local development)
+MessageQueueClient client = MessageQueueClientFactory.create("sqs://localhost:9324");
+
+// Google Cloud Pub/Sub
+MessageQueueClient client = MessageQueueClientFactory.create("pubsub://my-project-id");
+----
+
+=== Sending and Receiving Messages
+
+[source,java]
+----
+MessageQueueClient mq = MessageQueueClientFactory.create(Platform.env("MQ_URI"));
+
+// Send a message
+mq.sendMessage("my-queue", JsonBuilder.object()
+    .put("event", "user.created")
+    .put("userId", "42")
+    .build());
+
+// Receive up to 5 messages
+List<Message> messages = mq.receiveMessages("my-queue", 5);
+for (Message msg : messages) {
+    System.out.println("Received: " + msg.getBody());
+
+    // Process, then acknowledge/delete
+    mq.deleteMessage("my-queue", msg.getReceiptHandle());
+}
+
+// Check queue depth
+int count = mq.getMessageCount("my-queue");
+----
+
+=== Module Dependencies
+
+[source,xml]
+----
+<!-- API (always required) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-messagequeue</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- SQS provider (Node.js) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-sqs</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR SQS provider (JVM) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-sqs-jvm</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR Pub/Sub provider (Node.js) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-pubsub</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+
+<!-- OR Pub/Sub provider (JVM) -->
+<dependency>
+    <groupId>ca.weblite</groupId>
+    <artifactId>teavm-lambda-pubsub-jvm</artifactId>
+    <version>${teavm-lambda.version}</version>
+</dependency>
+----
+
+
+== Platform Abstraction
+
+The `Platform` class provides a Write Once Run Anywhere (WORA) abstraction that hides platform-specific details.
+Application code calls `Platform.start(router)` and `Platform.env(name)` without knowing whether it runs on Node.js or JVM.
+
+=== Platform API
+
+[source,java]
+----
+// Read an environment variable
+String dbUrl = Platform.env("DATABASE_URL");
+
+// Read with a default fallback
+String port = Platform.env("PORT", "8080");
+
+// Start the platform-specific server
+Platform.start(router);
+----
+
+`Platform.start()` discovers the appropriate adapter via `ServiceLoader`:
+
+* On Node.js with the Lambda adapter: exports the Lambda handler
+* On Node.js with the Cloud Run adapter: starts an HTTP server on `PORT`
+* On JVM with the HttpServer adapter: starts JDK's built-in HTTP server on `PORT`
+
+=== PlatformAdapter SPI
+
+Each platform adapter implements the `PlatformAdapter` interface:
+
+[source,java]
+----
+public interface PlatformAdapter {
+    String env(String name);
+    void start(Router router);
+}
+----
+
+The adapter is discovered automatically.
+You never need to reference platform-specific classes in your application code.
+
+
+== Deployment
+
+teavm-lambda supports three deployment targets from a single codebase.
+Maven profiles control which compilation backend and platform adapter are used.
+
+=== AWS Lambda Deployment
+
+==== SAM Template
+
+Create a `template.yaml` for AWS SAM:
+
+[source,yaml]
+----
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  MyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: my-app/target/lambda/
+      Environment:
+        Variables:
+          DATABASE_URL: !Sub "postgresql://user:pass@${DbHost}:5432/mydb"
+      Events:
+        Root:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+        Proxy:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+----
+
+==== Build and Deploy
+
+[source,bash]
+----
+# Build for Lambda (TeaVM/Node.js)
+mvn clean package -pl my-app -am
+
+# Local testing with SAM
+docker compose up -d   # Start PostgreSQL
+sam local start-api --template template.yaml
+
+# Deploy to AWS
+sam deploy --guided
+----
+
+=== Google Cloud Run Deployment
+
+==== Dockerfile
+
+Create a multi-stage `Dockerfile`:
+
+[source,dockerfile]
+----
+# Build stage
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -P teavm
+
+# Runtime stage
+FROM node:22-slim
+WORKDIR /app
+COPY --from=build /app/target/cloudrun/ .
+RUN npm install --production
+EXPOSE 8080
+CMD ["node", "server.js"]
+----
+
+==== Build and Deploy
+
+[source,bash]
+----
+# Build the Docker image
+docker build -t my-app .
+
+# Run locally
+docker run -p 8080:8080 \
+  -e DATABASE_URL=postgresql://demo:demo@host.docker.internal:5432/demo \
+  my-app
+
+# Deploy to Cloud Run
+gcloud run deploy my-app \
+  --image gcr.io/my-project/my-app \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+----
+
+=== JVM Standalone Server
+
+For local development or Docker-based deployments without TeaVM:
+
+[source,bash]
+----
+# Build with JVM HTTP server profile
+mvn clean package -P jvm-server
+
+# Run (listens on PORT, default 8080)
+DATABASE_URL=postgresql://demo:demo@localhost:5432/demo \
+  java -jar target/my-app.jar
+
+# Or with custom port
+PORT=3000 java -jar target/my-app.jar
+----
+
+=== Deployment Comparison
+
+[cols="1,1,1,1,1"]
+|===
+| | AWS Lambda | Cloud Run | JVM Standalone | JVM Lambda
+
+| Profile
+| `teavm` (default)
+| `teavm`
+| `jvm-server`
+| `jvm`
+
+| Runtime
+| Node.js {nodejs-version}
+| Node.js {nodejs-version}
+| JVM {java-version}
+| JVM {java-version}
+
+| Compiler
+| TeaVM
+| TeaVM
+| javac + shade
+| javac + shade
+
+| Cold start
+| ~100ms
+| ~100ms
+| ~1-3s
+| ~3-8s
+
+| Output
+| `target/lambda/`
+| `target/cloudrun/`
+| Uber JAR
+| Uber JAR
+|===
+
+
+== Static File Serving
+
+The Cloud Run adapter and JDK HttpServer adapter can serve static files alongside API routes.
+Static files are served from a `public/` directory adjacent to the application.
+
+=== Setting Up Static Files
+
+Place files in `src/main/webapp/` in your project.
+The Maven build copies them to `target/cloudrun/public/` (or the equivalent output directory):
+
+....
+src/main/webapp/
+├── index.html
+├── app.js
+├── style.css
+└── favicon.svg
+....
+
+=== Request Resolution Order
+
+On `GET` requests, the adapter checks for static files before routing to Java:
+
+1. If the path matches a directory and contains `index.html`, serve `index.html`
+2. If the path matches a file in `public/`, serve the file with the correct MIME type
+3. Otherwise, route to the Java `GeneratedRouter`
+4. Non-GET requests always go directly to the router
+
+=== Security
+
+The static file server includes path traversal protection.
+Paths are normalized and validated to ensure they remain within the `public/` directory.
+Requests containing `../` sequences that would escape the directory are rejected.
+
+
+== Build Configuration
+
+This section covers the Maven configuration required to build teavm-lambda applications.
+
+=== Maven Profiles
+
+teavm-lambda uses Maven profiles to control the compilation target:
+
+.Build Profile Comparison
+[cols="1,2,2,2"]
+|===
+| Profile | Compilation | Output | Adapters
+
+| `teavm` (default)
+| TeaVM → JavaScript
+| `target/lambda/` or `target/cloudrun/`
+| `teavm-lambda-adapter-lambda` or `teavm-lambda-adapter-cloudrun`
+
+| `jvm`
+| javac → bytecode, maven-shade uber JAR
+| Single JAR in `target/`
+| `teavm-lambda-adapter-lambda-jvm`
+
+| `jvm-server`
+| javac → bytecode, maven-shade uber JAR
+| Single JAR in `target/`
+| `teavm-lambda-adapter-httpserver`
+|===
+
+=== Annotation Processor Configuration
+
+The annotation processor is required in all profiles.
+It generates `GeneratedRouter` and `GeneratedContainer` at compile time:
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <version>3.13.0</version>
+    <configuration>
+        <release>21</release>
+        <annotationProcessorPaths>
+            <path>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-processor</artifactId>
+                <version>${teavm-lambda.version}</version>
+            </path>
+            <path>
+                <groupId>ca.weblite</groupId>
+                <artifactId>teavm-lambda-core</artifactId>
+                <version>${teavm-lambda.version}</version>
+            </path>
+        </annotationProcessorPaths>
+    </configuration>
+</plugin>
+----
+
+=== TeaVM Maven Plugin Configuration
+
+For the `teavm` profile, configure the TeaVM compiler:
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.teavm</groupId>
+    <artifactId>teavm-maven-plugin</artifactId>
+    <version>0.10.2</version>
+    <executions>
+        <execution>
+            <goals><goal>compile</goal></goals>
+            <configuration>
+                <mainClass>com.example.myapp.Main</mainClass>
+                <targetType>JAVASCRIPT</targetType>
+                <targetDirectory>${project.build.directory}/lambda</targetDirectory>
+                <targetFileName>teavm-app.js</targetFileName>
+                <minifying>false</minifying>
+                <optimizationLevel>SIMPLE</optimizationLevel>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+----
+
+=== npm Dependencies
+
+TeaVM-compiled applications require a `package.json` for Node.js runtime dependencies:
+
+[source,json]
+----
+{
+  "name": "my-teavm-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "pg": "^8.13.0",
+    "@sentry/node": "^9.0.0"
+  }
+}
+----
+
+The `pg` package is required for PostgreSQL access.
+The `@sentry/node` package is optional (for error tracking).
+
+
+== Testing
+
+teavm-lambda uses integration testing via shell scripts and Docker Compose.
+There is no unit test framework — testing is done by running the application against real infrastructure and verifying HTTP responses.
+
+=== Integration Test Strategy
+
+The test approach uses:
+
+1. Docker Compose to start dependencies (PostgreSQL, DynamoDB Local, etc.)
+2. Build the application with Maven
+3. Start the application (via SAM local, Docker, or JVM standalone)
+4. Run HTTP requests with `curl` and validate responses
+5. Tear down infrastructure
+
+=== Running Tests
+
+[source,bash]
+----
+# Lambda integration tests
+mvn clean package -pl teavm-lambda-demo -am
+./teavm-lambda-demo/run-tests.sh
+
+# Cloud Run integration tests
+./teavm-lambda-demo-cloudrun/run-tests.sh
+
+# Test against a running server (any base URL)
+./teavm-lambda-demo/test.sh http://localhost:8080
+----
+
+=== Parity Testing
+
+teavm-lambda includes parity tests that verify the TeaVM/Node.js and JVM builds produce identical behavior:
+
+[source,bash]
+----
+# Run same tests against both runtimes
+./run-parity-tests.sh
+----
+
+This builds and tests the application twice — once with the `teavm` profile (Node.js) and once with the `jvm-server` profile (JVM) — and compares the results.
+
+
+[appendix]
+== Annotation Reference
+
+Complete reference of all annotations provided by teavm-lambda.
+
+=== Routing Annotations
+
+[cols="2,1,2,3"]
+|===
+| Annotation | Target | Parameters | Description
+
+| `@Path`
+| TYPE, METHOD
+| `value` — URL path or segment
+| Defines URL path. Class-level sets base, method-level appends.
+
+| `@GET`
+| METHOD
+| —
+| Marks method as GET handler
+
+| `@POST`
+| METHOD
+| —
+| Marks method as POST handler
+
+| `@PUT`
+| METHOD
+| —
+| Marks method as PUT handler
+
+| `@DELETE`
+| METHOD
+| —
+| Marks method as DELETE handler
+
+| `@PATCH`
+| METHOD
+| —
+| Marks method as PATCH handler
+
+| `@HEAD`
+| METHOD
+| —
+| Marks method as HEAD handler
+
+| `@OPTIONS`
+| METHOD
+| —
+| Marks method as OPTIONS handler
+|===
+
+=== Parameter Binding Annotations
+
+[cols="2,1,2,3"]
+|===
+| Annotation | Target | Parameters | Description
+
+| `@PathParam`
+| PARAMETER
+| `value` — path variable name
+| Binds a `{placeholder}` from `@Path` to a method parameter
+
+| `@QueryParam`
+| PARAMETER
+| `value` — query parameter name
+| Binds a URL query parameter
+
+| `@HeaderParam`
+| PARAMETER
+| `value` — header name (case-insensitive)
+| Binds an HTTP request header
+
+| `@Body`
+| PARAMETER
+| —
+| Binds the entire request body as a string
+|===
+
+=== Dependency Injection Annotations
+
+[cols="2,1,2,3"]
+|===
+| Annotation | Target | Parameters | Description
+
+| `@Component`
+| TYPE
+| —
+| Registers class as a managed component
+
+| `@Service`
+| TYPE
+| —
+| Semantic alias for `@Component` (business logic layer)
+
+| `@Repository`
+| TYPE
+| —
+| Semantic alias for `@Component` (data access layer)
+
+| `@Singleton`
+| TYPE
+| —
+| Component instance is cached and shared
+
+| `@Inject`
+| CONSTRUCTOR
+| —
+| Marks constructor for dependency injection
+|===
+
+=== Validation Annotations
+
+[cols="2,1,2,3"]
+|===
+| Annotation | Target | Parameters | Description
+
+| `@NotNull`
+| PARAMETER
+| `message` (default: `"must not be null"`)
+| Validates parameter is not null
+
+| `@NotEmpty`
+| PARAMETER
+| `message` (default: `"must not be empty"`)
+| Validates string is not null and not empty
+
+| `@Min`
+| PARAMETER
+| `value` (long), `message`
+| Validates numeric value meets minimum
+
+| `@Max`
+| PARAMETER
+| `value` (long), `message`
+| Validates numeric value does not exceed maximum
+
+| `@Pattern`
+| PARAMETER
+| `value` (regex), `message`
+| Validates string matches regex pattern
+|===
+
+=== Security Annotations
+
+[cols="2,1,2,3"]
+|===
+| Annotation | Target | Parameters | Description
+
+| `@RolesAllowed`
+| TYPE, METHOD
+| `value` — array of role names
+| Restricts access to specified roles (from JWT `groups` claim)
+
+| `@PermitAll`
+| TYPE, METHOD
+| —
+| Allows all access; overrides class-level restrictions
+
+| `@DenyAll`
+| TYPE, METHOD
+| —
+| Denies all access (returns 403 Forbidden)
+|===
+
+=== OpenAPI Documentation Annotations
+
+[cols="2,1,2,3"]
+|===
+| Annotation | Target | Parameters | Description
+
+| `@ApiInfo`
+| TYPE
+| `title`, `version`, `description` (optional)
+| Defines the OpenAPI info section
+
+| `@ApiTag`
+| TYPE
+| `value`, `description` (optional)
+| Groups endpoints under a tag
+
+| `@ApiOperation`
+| METHOD
+| `summary` (optional), `description` (optional)
+| Documents an API operation
+
+| `@ApiResponse`
+| METHOD
+| `code`, `description`, `mediaType` (default: `"application/json"`)
+| Documents a possible response
+
+| `@ApiResponses`
+| METHOD
+| `value` — array of `@ApiResponse`
+| Container for repeatable `@ApiResponse`
+|===
+
+
+[appendix]
+== Environment Variables Reference
+
+[cols="2,3,1,2"]
+|===
+| Variable | Description | Default | Used By
+
+| `DATABASE_URL`
+| PostgreSQL connection string (e.g., `postgresql://user:pass@host:5432/db`)
+| —
+| `DatabaseFactory`
+
+| `PORT`
+| HTTP server listen port
+| `8080`
+| Cloud Run adapter, HttpServer adapter
+
+| `JWT_SECRET`
+| HMAC secret key for JWT validation (HS256/HS384/HS512)
+| —
+| `JwtValidatorFactory`
+
+| `JWT_PUBLIC_KEY`
+| PEM-encoded public key for JWT validation (RS256/ES256)
+| —
+| `JwtValidatorFactory`
+
+| `JWT_ISSUER`
+| Expected JWT issuer (`iss` claim)
+| —
+| `JwtValidatorFactory`
+
+| `JWT_ALGORITHM`
+| JWT signing algorithm
+| `HS256`
+| `JwtValidatorFactory`
+
+| `SENTRY_DSN`
+| Sentry error tracking Data Source Name
+| —
+| Sentry integration
+
+| `NOSQL_URI`
+| NoSQL connection URI (e.g., `dynamodb://us-east-1`)
+| —
+| `NoSqlClientFactory`
+
+| `OBJECT_STORE_URI`
+| Object storage URI (e.g., `s3://us-east-1`)
+| —
+| `ObjectStoreClientFactory`
+
+| `MQ_URI`
+| Message queue URI (e.g., `sqs://us-east-1`)
+| —
+| `MessageQueueClientFactory`
+|===
+
+
+[appendix]
+== Connection URI Reference
+
+teavm-lambda uses URI schemes to select the appropriate service provider at runtime.
+
+[cols="2,3,2"]
+|===
+| URI Scheme | Example | Provider Module
+
+| `postgresql://`
+| `postgresql://user:pass@host:5432/db`
+| `teavm-lambda-db` / `teavm-lambda-db-jvm`
+
+| `dynamodb://`
+| `dynamodb://us-east-1` +
+`dynamodb://localhost:8000` +
+`dynamodb://us-east-1/table-prefix`
+| `teavm-lambda-dynamodb`
+
+| `firestore://`
+| `firestore://my-project-id`
+| `teavm-lambda-firestore`
+
+| `s3://`
+| `s3://us-east-1` +
+`s3://localhost:9000`
+| `teavm-lambda-s3` / `teavm-lambda-s3-jvm`
+
+| `gcs://`
+| `gcs://my-project-id`
+| `teavm-lambda-gcs` / `teavm-lambda-gcs-jvm`
+
+| `sqs://`
+| `sqs://us-east-1` +
+`sqs://localhost:9324`
+| `teavm-lambda-sqs` / `teavm-lambda-sqs-jvm`
+
+| `pubsub://`
+| `pubsub://my-project-id`
+| `teavm-lambda-pubsub` / `teavm-lambda-pubsub-jvm`
+|===
+
+
+== FAQ (Frequently Asked Questions)
+
+=== What is teavm-lambda?
+
+teavm-lambda is a Java framework for building serverless REST APIs that deploy to AWS Lambda and Google Cloud Run.
+It compiles Java source code to JavaScript using TeaVM and runs on Node.js {nodejs-version}, achieving fast cold starts without a JVM.
+The same code can also run natively on the JVM without modification.
+
+=== How does teavm-lambda compare to Spring Cloud Function or Quarkus Lambda?
+
+teavm-lambda is significantly more lightweight than Spring Cloud Function or Quarkus Lambda.
+It achieves ~100ms cold starts on Lambda by compiling to JavaScript and running on Node.js, compared to 3-8 seconds for Spring on JVM.
+Unlike Quarkus Native or GraalVM native-image, teavm-lambda does not require a special build toolchain — it uses standard Maven and the TeaVM compiler plugin.
+
+=== What Java version does teavm-lambda require?
+
+teavm-lambda requires JDK {java-version} or later for compilation.
+Eclipse Temurin is the recommended distribution.
+The `maven-compiler-plugin` is configured with `<release>{java-version}</release>`.
+
+=== What Node.js version does teavm-lambda target?
+
+teavm-lambda targets Node.js {nodejs-version}.
+The AWS Lambda runtime is `nodejs22.x`, and Cloud Run Dockerfiles use `node:22-slim`.
+
+=== Can I use teavm-lambda without TeaVM (JVM only)?
+
+Yes.
+Use the `jvm-server` Maven profile to compile to a standard JVM uber JAR with the built-in JDK HttpServer.
+Your application code does not change — the same `Platform.start(router)` call discovers the JVM adapter via ServiceLoader.
+
+=== How does compile-time code generation work?
+
+teavm-lambda uses a JSR 269 annotation processor that runs during Maven compilation.
+It scans your `@Path`, `@Component`, `@Service`, and `@Repository` annotations and generates two classes: `GeneratedRouter` (request matching and dispatch) and `GeneratedContainer` (dependency injection wiring).
+These classes are plain Java — no reflection, no runtime bytecode generation.
+
+=== Does teavm-lambda support reflection?
+
+No.
+teavm-lambda uses zero runtime reflection.
+All routing, parameter binding, validation, and dependency injection are resolved at compile time by the annotation processor.
+This is essential for TeaVM compatibility (TeaVM does not support Java reflection) and also improves JVM performance.
+
+=== What databases are supported?
+
+teavm-lambda supports PostgreSQL through the platform-neutral `Database` interface.
+On Node.js, it uses the `pg` npm package.
+On JVM, it uses JDBC with the PostgreSQL driver.
+For NoSQL, teavm-lambda supports DynamoDB and Firestore through the `NoSqlClient` interface.
+
+=== How do I add CORS support?
+
+Add the `CorsMiddleware` to your middleware pipeline:
+
+[source,java]
+----
+Router router = new MiddlewareRouter(new GeneratedRouter(container))
+    .use(CorsMiddleware.builder()
+        .allowOrigin("https://example.com")
+        .allowMethods("GET", "POST", "PUT", "DELETE")
+        .build());
+----
+
+The middleware handles preflight `OPTIONS` requests and adds CORS headers to all responses.
+
+=== How do I handle authentication and authorization?
+
+Set the `JWT_SECRET` (or `JWT_PUBLIC_KEY`) environment variable and annotate your resource classes or methods with `@RolesAllowed`, `@PermitAll`, or `@DenyAll`.
+The generated router automatically extracts the Bearer token from the `Authorization` header, validates it, and checks roles against the JWT `groups` claim.
+Use `SecurityContext` as a method parameter to access the authenticated user's claims.
+
+=== How do I deploy to AWS Lambda?
+
+Build with `mvn clean package` (the default `teavm` profile), create a SAM `template.yaml` referencing the `target/lambda/` directory, and deploy with `sam deploy --guided`.
+The Lambda function uses the `nodejs22.x` runtime with handler `index.handler`.
+
+=== How do I deploy to Google Cloud Run?
+
+Create a multi-stage Dockerfile: build with Maven in the first stage, copy the output to a `node:22-slim` image in the second stage.
+Deploy with `gcloud run deploy`.
+The Cloud Run adapter starts an HTTP server on the `PORT` environment variable (default 8080).
+
+=== Can I serve static files?
+
+Yes, on Cloud Run and JVM standalone deployments.
+Place files in `src/main/webapp/` and they are copied to the `public/` directory at build time.
+The adapter serves static files with correct MIME types and path traversal protection.
+On GET requests, static files take precedence over API routes.
+
+=== How do I run locally for development?
+
+Use `docker compose up -d` to start PostgreSQL, then either:
+1. `sam local start-api` for Lambda testing,
+2. `mvn clean package -P jvm-server && java -jar target/my-app.jar` for JVM standalone, or
+3. `docker compose up` for Cloud Run (with Dockerfile).
+
+=== What is the WORA principle in teavm-lambda?
+
+WORA stands for Write Once Run Anywhere.
+In teavm-lambda, it means your application code uses platform-neutral APIs (`Platform`, `Database`, `Router`) that compile to both JavaScript (Node.js) and native JVM bytecode.
+Maven profiles select the target platform, but your source code does not change.
+
+=== How do I add a health check endpoint?
+
+Add the `HealthEndpoint` middleware to your pipeline with one or more health check functions:
+
+[source,java]
+----
+HealthEndpoint health = new HealthEndpoint()
+    .add("database", () -> {
+        try { db.query("SELECT 1"); return HealthResult.up(); }
+        catch (Exception e) { return HealthResult.down(e); }
+    });
+Router router = new MiddlewareRouter(innerRouter).use(health);
+----
+
+This exposes `GET /health`, `GET /health/ready`, and `GET /health/live` endpoints.
+
+=== What is ProblemDetail and when should I use it?
+
+`ProblemDetail` implements https://datatracker.ietf.org/doc/html/rfc7807[RFC 7807 Problem Details for HTTP APIs].
+Use it for structured error responses instead of ad-hoc JSON error objects.
+Call `ProblemDetail.notFound("message").toResponse()` to return a standardized error with `Content-Type: application/problem+json`.
+
+=== How do I use DynamoDB or Firestore?
+
+Add the `teavm-lambda-nosqldb` API module and the appropriate provider module (`teavm-lambda-dynamodb` or `teavm-lambda-firestore`) to your `pom.xml`.
+Create a client with `NoSqlClientFactory.create("dynamodb://us-east-1")` or `NoSqlClientFactory.create("firestore://my-project-id")`.
+Use `client.get()`, `client.put()`, `client.delete()`, `client.query()`, and `client.list()` for CRUD operations.
+
+=== How do I use S3 or Google Cloud Storage?
+
+Add the `teavm-lambda-objectstore` API module and the provider module (`teavm-lambda-s3` or `teavm-lambda-gcs`) to your `pom.xml`.
+Create a client with `ObjectStoreClientFactory.create("s3://us-east-1")` or `ObjectStoreClientFactory.create("gcs://my-project-id")`.
+Use `client.putObject()`, `client.getObject()`, `client.deleteObject()`, and `client.listObjects()` for storage operations.
+
+=== How do I use SQS or Pub/Sub?
+
+Add the `teavm-lambda-messagequeue` API module and the provider module (`teavm-lambda-sqs` or `teavm-lambda-pubsub`) to your `pom.xml`.
+Create a client with `MessageQueueClientFactory.create("sqs://us-east-1")` or `MessageQueueClientFactory.create("pubsub://my-project-id")`.
+Use `client.sendMessage()` to enqueue and `client.receiveMessages()` plus `client.deleteMessage()` to dequeue and acknowledge messages.
+
+
+== Glossary
+
+TeaVM::
+An ahead-of-time compiler that translates Java bytecode to JavaScript (and WebAssembly).
+teavm-lambda uses TeaVM {teavm-version} to compile Java applications to JavaScript that runs on Node.js {nodejs-version}.
+
+JSO (JavaScript Object)::
+TeaVM's JavaScript interop layer.
+It provides `@JSBody` for inline JavaScript, `@JSFunctor` for callback interfaces, and `@Async` for converting JavaScript Promises to blocking Java calls.
+
+SPI (Service Provider Interface)::
+A Java mechanism for discovering implementations at runtime via `ServiceLoader` and `META-INF/services` files.
+teavm-lambda uses SPI to discover platform adapters, database drivers, compression providers, and other platform-specific implementations.
+
+WORA (Write Once Run Anywhere)::
+The principle that application code uses platform-neutral APIs and compiles to multiple targets (Node.js and JVM) without source code changes.
+Maven profiles control which implementation modules are included.
+
+GeneratedRouter::
+A class generated at compile time by the `RouteProcessor` annotation processor.
+It contains the complete HTTP routing logic derived from `@Path`, `@GET`, `@POST`, and other annotations.
+It handles parameter extraction, validation, security checks, and method dispatch.
+
+GeneratedContainer::
+A class generated at compile time by the `ContainerProcessor` annotation processor.
+It extends `Container` and wires all `@Component`, `@Service`, and `@Repository` classes with their dependencies.
+
+PlatformAdapter::
+An interface implemented by each deployment target (Lambda, Cloud Run, JVM HttpServer).
+The adapter is discovered via `ServiceLoader` and handles platform-specific HTTP integration and environment variable access.
+
+Middleware::
+A functional interface that intercepts HTTP requests and responses in a composable pipeline.
+Middleware components can inspect, modify, or short-circuit the request/response flow.
+
+ProblemDetail::
+A class implementing RFC 7807 Problem Details for HTTP APIs.
+It provides a standardized JSON format for error responses with `type`, `title`, `status`, and `detail` fields.
