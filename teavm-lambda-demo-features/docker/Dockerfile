@@ -13,6 +13,7 @@ COPY teavm-lambda-adapter-lambda/pom.xml teavm-lambda-adapter-lambda/
 COPY teavm-lambda-adapter-lambda-jvm/pom.xml teavm-lambda-adapter-lambda-jvm/
 COPY teavm-lambda-adapter-cloudrun/pom.xml teavm-lambda-adapter-cloudrun/
 COPY teavm-lambda-adapter-httpserver/pom.xml teavm-lambda-adapter-httpserver/
+COPY teavm-lambda-adapter-war/pom.xml teavm-lambda-adapter-war/
 COPY teavm-lambda-db-api/pom.xml teavm-lambda-db-api/
 COPY teavm-lambda-db/pom.xml teavm-lambda-db/
 COPY teavm-lambda-db-jvm/pom.xml teavm-lambda-db-jvm/
