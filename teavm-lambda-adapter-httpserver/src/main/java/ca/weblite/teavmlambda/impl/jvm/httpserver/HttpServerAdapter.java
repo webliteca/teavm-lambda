@@ -88,6 +88,13 @@ public final class HttpServerAdapter {
             });
             server.start();
             logger.info("HTTP server listening on port " + port);
+
+            // Graceful shutdown on SIGTERM
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                logger.info("Shutdown signal received, stopping server...");
+                server.stop(5); // 5 second grace period for in-flight requests
+                logger.info("Server stopped.");
+            }));
         } catch (IOException e) {
             throw new RuntimeException("Failed to start HTTP server", e);
         }

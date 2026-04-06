@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "path": "/items",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queryStringParameters": null,
+  "body": null
+}

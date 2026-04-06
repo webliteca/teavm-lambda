@@ -36,6 +36,10 @@ COPY teavm-lambda-demo-nosqldb/pom.xml teavm-lambda-demo-nosqldb/
 COPY teavm-lambda-auth/pom.xml teavm-lambda-auth/
 COPY teavm-lambda-auth-jvm/pom.xml teavm-lambda-auth-jvm/
 COPY teavm-lambda-demo-auth/pom.xml teavm-lambda-demo-auth/
+COPY teavm-lambda-compression/pom.xml teavm-lambda-compression/
+COPY teavm-lambda-compression-jvm/pom.xml teavm-lambda-compression-jvm/
+COPY teavm-lambda-demo-features/pom.xml teavm-lambda-demo-features/
+COPY teavm-lambda-demo-features-lambda/pom.xml teavm-lambda-demo-features-lambda/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo -am -q || true
 

@@ -1,0 +1,9 @@
+{
+  "httpMethod": "GET",
+  "path": "/items",
+  "headers": {
+    "X-Request-Id": "test-req-456"
+  },
+  "queryStringParameters": null,
+  "body": null
+}

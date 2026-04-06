@@ -1,0 +1,10 @@
+{
+  "httpMethod": "OPTIONS",
+  "path": "/items",
+  "headers": {
+    "Origin": "http://example.com",
+    "Access-Control-Request-Method": "POST"
+  },
+  "queryStringParameters": null,
+  "body": null
+}
