@@ -63,10 +63,10 @@ final class JsFirebaseKeyFetcher {
         try {
             JSObject result = awaitFetch(fetchKeys(GOOGLE_CERTS_URL));
             String body = getBody(result);
-            long maxAge = getMaxAge(result);
+            int maxAge = getMaxAge(result);
             if (body != null && !body.isEmpty()) {
                 cachedKeysJson = body;
-                cacheExpiresAt = System.currentTimeMillis() + (maxAge * 1000);
+                cacheExpiresAt = System.currentTimeMillis() + ((long) maxAge * 1000);
             }
         } catch (RuntimeException e) {
             // If fetch fails and we have cached keys, continue using them
@@ -132,7 +132,7 @@ final class JsFirebaseKeyFetcher {
     private static native String getBody(JSObject result);
 
     @JSBody(params = {"result"}, script = "return result.maxAge || 21600;")
-    private static native long getMaxAge(JSObject result);
+    private static native int getMaxAge(JSObject result);
 
     @JSBody(params = {"json", "key"}, script = ""
             + "try { var obj = JSON.parse(json); return obj[key] != null ? String(obj[key]) : null; }"
