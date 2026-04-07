@@ -7,6 +7,8 @@ import ca.weblite.teavmlambda.api.auth.JwtValidator;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,18 +17,22 @@ import java.util.Set;
 
 /**
  * JVM implementation of {@link JwtValidator}.
- * Uses {@code javax.crypto.Mac} for HMAC signature verification.
+ * Supports HMAC-SHA256/384/512 (HS256/HS384/HS512) and RSA-SHA256 (RS256) signature verification.
+ * For Firebase Auth, fetches public keys from Google's endpoint and validates Firebase-specific claims.
  */
 public class JvmJwtValidator implements JwtValidator {
 
     private final String secret;
     private final String issuer;
     private final String algorithm;
+    private final String firebaseProjectId;
 
     public JvmJwtValidator(String secret, String issuer, String algorithm) {
         this.secret = secret;
         this.issuer = issuer;
         this.algorithm = algorithm != null ? algorithm : "HS256";
+        // For Firebase mode, secret holds the project ID
+        this.firebaseProjectId = "firebase".equalsIgnoreCase(this.algorithm) ? secret : null;
     }
 
     @Override
@@ -43,12 +49,16 @@ public class JvmJwtValidator implements JwtValidator {
         String header = parts[0];
         String payload = parts[1];
         String signature = parts[2];
-
-        // Verify signature
         String signingInput = header + "." + payload;
-        String expected = computeHmac(signingInput, secret, algorithm);
-        if (!constantTimeEquals(expected, signature)) {
-            throw new JwtValidationException("Invalid JWT signature");
+
+        if ("firebase".equalsIgnoreCase(algorithm) || "RS256".equalsIgnoreCase(algorithm)) {
+            verifyRs256(header, signingInput, signature);
+        } else {
+            // HMAC verification (HS256/HS384/HS512)
+            String expected = computeHmac(signingInput, secret, algorithm);
+            if (!constantTimeEquals(expected, signature)) {
+                throw new JwtValidationException("Invalid JWT signature");
+            }
         }
 
         // Decode payload
@@ -56,6 +66,54 @@ public class JvmJwtValidator implements JwtValidator {
                 Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8);
 
         return parseClaims(payloadJson);
+    }
+
+    private void verifyRs256(String headerB64, String signingInput, String signature) throws JwtValidationException {
+        String headerJson = new String(
+                Base64.getUrlDecoder().decode(headerB64), StandardCharsets.UTF_8);
+
+        // Extract kid from header
+        String kid = extractString(headerJson, "kid");
+
+        // Get the public key
+        PublicKey publicKey;
+        if (firebaseProjectId != null) {
+            // Firebase mode: fetch key from Google endpoint by kid
+            if (kid == null || kid.isEmpty()) {
+                throw new JwtValidationException("JWT header missing 'kid' for RS256 verification");
+            }
+            publicKey = JvmFirebaseKeyFetcher.getPublicKey(kid);
+            if (publicKey == null) {
+                throw new JwtValidationException("No public key found for kid: " + kid);
+            }
+        } else {
+            // Static RS256: parse the configured PEM public key
+            try {
+                publicKey = JvmFirebaseKeyFetcher.parsePublicKeyFromPem(secret);
+            } catch (Exception e) {
+                throw new JwtValidationException("Failed to parse RS256 public key: " + e.getMessage(), e);
+            }
+        }
+
+        try {
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initVerify(publicKey);
+            sig.update(signingInput.getBytes(StandardCharsets.UTF_8));
+
+            // Decode base64url signature
+            String b64 = signature.replace('-', '+').replace('_', '/');
+            int pad = b64.length() % 4;
+            if (pad > 0) b64 += "====".substring(pad);
+            byte[] sigBytes = Base64.getDecoder().decode(b64);
+
+            if (!sig.verify(sigBytes)) {
+                throw new JwtValidationException("Invalid JWT signature");
+            }
+        } catch (JwtValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new JwtValidationException("RS256 signature verification failed: " + e.getMessage(), e);
+        }
     }
 
     private String computeHmac(String data, String secret, String algorithm) throws JwtValidationException {
@@ -109,8 +167,31 @@ public class JvmJwtValidator implements JwtValidator {
             throw new JwtValidationException("Invalid issuer: expected " + issuer + ", got " + iss);
         }
 
+        // Firebase-specific validations
+        if (firebaseProjectId != null) {
+            // Verify audience matches project ID
+            String aud = extractString(json, "aud");
+            if (!firebaseProjectId.equals(aud)) {
+                throw new JwtValidationException(
+                        "Invalid audience: expected " + firebaseProjectId + ", got " + aud);
+            }
+            // Verify sub is non-empty (Firebase UID)
+            if (sub == null || sub.isEmpty()) {
+                throw new JwtValidationException("Firebase token missing 'sub' claim (user ID)");
+            }
+        }
+
         // Extract groups
         Set<String> groups = extractStringArray(json, "groups");
+
+        // For Firebase tokens, add default "user" role and extract custom claims
+        if (firebaseProjectId != null) {
+            groups = new HashSet<>(groups); // make mutable
+            groups.add("user");
+            // Firebase custom claims may include a "roles" array
+            Set<String> roles = extractStringArray(json, "roles");
+            groups.addAll(roles);
+        }
 
         // Build all claims map
         Map<String, String> allClaims = new HashMap<>();
@@ -127,6 +208,10 @@ public class JvmJwtValidator implements JwtValidator {
         if (email != null) allClaims.put("email", email);
         String name = extractString(json, "name");
         if (name != null) allClaims.put("name", name);
+        String emailVerified = extractString(json, "email_verified");
+        if (emailVerified != null) allClaims.put("email_verified", emailVerified);
+        String aud = extractString(json, "aud");
+        if (aud != null) allClaims.put("aud", aud);
 
         return new JwtClaims(sub, iss, exp, iat, groups, allClaims);
     }
