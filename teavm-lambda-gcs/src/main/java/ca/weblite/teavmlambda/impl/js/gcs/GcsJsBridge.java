@@ -60,4 +60,23 @@ final class GcsJsBridge {
 
     @JSBody(params = {"arr", "index"}, script = "return String(arr[index]);")
     static native String arrayGetString(JSObject arr, int index);
+
+    @JSBody(params = {"storage", "bucket", "key", "buffer", "contentType"}, script =
+            "return storage.bucket(bucket).file(key)"
+            + ".save(Buffer.from(buffer), { contentType: contentType });")
+    static native JSPromise<JSObject> putObjectBytes(JSObject storage, String bucket, String key,
+            JSObject buffer, String contentType);
+
+    @JSBody(params = {"storage", "bucket", "key"}, script =
+            "return storage.bucket(bucket).file(key).download()"
+            + ".then(function(data) { return data[0]; });")
+    static native JSPromise<JSObject> getObjectBytes(JSObject storage, String bucket, String key);
+
+    @JSBody(params = {"bytes"}, script = "return Buffer.from(bytes);")
+    static native JSObject toNodeBuffer(byte[] bytes);
+
+    @JSBody(params = {"buffer"}, script =
+            "var arr = new Int8Array(buffer.buffer, buffer.byteOffset, buffer.length);"
+            + "return Array.prototype.slice.call(arr);")
+    static native byte[] fromNodeBuffer(JSObject buffer);
 }

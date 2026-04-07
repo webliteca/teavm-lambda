@@ -84,4 +84,31 @@ final class S3JsBridge {
 
     @JSBody(params = {"obj", "key"}, script = "return String(obj[key]);")
     static native String getStringProperty(JSObject obj, String key);
+
+    @JSBody(params = {"client", "bucket", "key", "buffer", "contentType"}, script =
+            "var s3 = require('@aws-sdk/client-s3');"
+            + "return client.send(new s3.PutObjectCommand({"
+            + "  Bucket: bucket, Key: key, Body: Buffer.from(buffer), ContentType: contentType"
+            + "}));")
+    static native JSPromise<JSObject> putObjectBytes(JSObject client, String bucket, String key,
+            JSObject buffer, String contentType);
+
+    @JSBody(params = {"client", "bucket", "key"}, script =
+            "var s3 = require('@aws-sdk/client-s3');"
+            + "return client.send(new s3.GetObjectCommand({"
+            + "  Bucket: bucket, Key: key"
+            + "})).then(function(resp) {"
+            + "  return resp.Body.transformToByteArray();"
+            + "}).then(function(arr) {"
+            + "  return Buffer.from(arr);"
+            + "});")
+    static native JSPromise<JSObject> getObjectBytes(JSObject client, String bucket, String key);
+
+    @JSBody(params = {"bytes"}, script = "return Buffer.from(bytes);")
+    static native JSObject toNodeBuffer(byte[] bytes);
+
+    @JSBody(params = {"buffer"}, script =
+            "var arr = new Int8Array(buffer.buffer, buffer.byteOffset, buffer.length);"
+            + "return Array.prototype.slice.call(arr);")
+    static native byte[] fromNodeBuffer(JSObject buffer);
 }

@@ -67,4 +67,26 @@ public class S3ObjectStoreClient implements ObjectStoreClient {
                 S3JsBridge.headObject(s3Client, bucket, key));
         return S3JsBridge.getBooleanProperty(result, "exists");
     }
+
+    @Override
+    public void putObjectBytes(String bucket, String key, byte[] data, String contentType) {
+        JSObject buffer = S3JsBridge.toNodeBuffer(data);
+        S3AsyncBridge.awaitVoid(
+                S3JsBridge.putObjectBytes(s3Client, bucket, key, buffer, contentType));
+    }
+
+    @Override
+    public byte[] getObjectBytes(String bucket, String key) {
+        try {
+            JSObject result = S3AsyncBridge.await(
+                    S3JsBridge.getObjectBytes(s3Client, bucket, key));
+            return S3JsBridge.fromNodeBuffer(result);
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && (e.getMessage().contains("NoSuchKey")
+                    || e.getMessage().contains("The specified key does not exist"))) {
+                return null;
+            }
+            throw e;
+        }
+    }
 }
