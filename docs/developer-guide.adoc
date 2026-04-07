@@ -1592,6 +1592,100 @@ The generated router returns standard error responses for security violations:
 * **401 Unauthorized** — missing or invalid JWT token
 * **403 Forbidden** — valid token but insufficient roles (or `@DenyAll`)
 
+=== Firebase Auth (RS256) Integration
+
+teavm-lambda supports Firebase Authentication out of the box.
+Firebase Auth issues RS256 (RSA-SHA256) signed JWTs, and teavm-lambda can validate them by automatically fetching Google's public keys.
+
+==== Configuration
+
+Set the following environment variables:
+
+[cols="2,3,1"]
+|===
+| Variable | Description | Required
+
+| `JWT_ALGORITHM`
+| Set to `firebase` for Firebase Auth mode
+| Yes
+
+| `FIREBASE_PROJECT_ID`
+| Your Firebase project ID (e.g., `my-app-12345`)
+| Yes
+|===
+
+When `JWT_ALGORITHM=firebase`:
+
+* The issuer is automatically set to `\https://securetoken.google.com/<project-id>`
+* Public keys are fetched from Google's X.509 certificate endpoint and cached based on `Cache-Control` headers
+* The `aud` (audience) claim is validated against your project ID
+* The `sub` claim (Firebase UID) must be non-empty
+
+No `JWT_SECRET` or `JWT_PUBLIC_KEY` is needed — keys are fetched automatically.
+
+==== Firebase Claim Mapping
+
+Firebase token claims are mapped to `SecurityContext` as follows:
+
+[cols="2,3"]
+|===
+| Firebase Claim | SecurityContext Access
+
+| `sub` (Firebase UID)
+| `ctx.getSubject()`
+
+| `name`
+| `ctx.getName()`
+
+| `email`
+| `ctx.getClaim("email")`
+
+| `email_verified`
+| `ctx.getClaim("email_verified")`
+
+| Custom `roles` array
+| `ctx.getRoles()` (merged with `groups`)
+|===
+
+All authenticated Firebase users automatically receive the `user` role, so `@RolesAllowed({"user"})` works for any valid Firebase token.
+
+==== Example
+
+[source,java]
+----
+@Path("/profile")
+@Component
+@RolesAllowed({"user"})  // Any authenticated Firebase user
+public class ProfileResource {
+
+    @GET
+    @Path("/me")
+    public Response me(SecurityContext ctx) {
+        return Response.ok(JsonBuilder.object()
+            .put("uid", ctx.getSubject())       // Firebase UID
+            .put("email", ctx.getClaim("email"))
+            .put("name", ctx.getName())
+            .build())
+            .header("Content-Type", "application/json");
+    }
+}
+----
+
+==== Static RS256 Keys
+
+For non-Firebase RS256 tokens, set `JWT_ALGORITHM=RS256` and provide the PEM-encoded public key via `JWT_PUBLIC_KEY`:
+
+[source,bash]
+----
+export JWT_ALGORITHM=RS256
+export JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqh...
+-----END PUBLIC KEY-----"
+export JWT_ISSUER=my-auth-server  # optional
+----
+
+If both `JWT_ALGORITHM=RS256` and `FIREBASE_PROJECT_ID` are set, Firebase mode is used.
+
 
 == OpenAPI and Swagger UI
 
@@ -2756,8 +2850,13 @@ Complete reference of all annotations provided by teavm-lambda.
 | `JwtValidatorFactory`
 
 | `JWT_ALGORITHM`
-| JWT signing algorithm
+| JWT signing algorithm (`HS256`, `RS256`, or `firebase`)
 | `HS256`
+| `JwtValidatorFactory`
+
+| `FIREBASE_PROJECT_ID`
+| Firebase project ID for Firebase Auth token validation
+| —
 | `JwtValidatorFactory`
 
 | `SENTRY_DSN`
@@ -2896,6 +2995,7 @@ The middleware handles preflight `OPTIONS` requests and adds CORS headers to all
 Set the `JWT_SECRET` (or `JWT_PUBLIC_KEY`) environment variable and annotate your resource classes or methods with `@RolesAllowed`, `@PermitAll`, or `@DenyAll`.
 The generated router automatically extracts the Bearer token from the `Authorization` header, validates it, and checks roles against the JWT `groups` claim.
 Use `SecurityContext` as a method parameter to access the authenticated user's claims.
+For Firebase Auth, set `JWT_ALGORITHM=firebase` and `FIREBASE_PROJECT_ID` — public keys are fetched and cached automatically.
 
 === How do I deploy to AWS Lambda?
 
