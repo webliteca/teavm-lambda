@@ -326,11 +326,23 @@ public class RouteProcessor extends AbstractProcessor {
                 out.println("        String[] segments = path.split(\"/\", -1);");
                 out.println();
 
+                // Collect all routes and sort: literal segments before path params at same depth
+                List<RouteWithTarget> allRoutes = new ArrayList<>();
                 for (ResourceClass resource : resources) {
                     String fieldName = fieldNameFor(resource.simpleName);
                     for (RouteMethod route : resource.methods) {
-                        generateRouteMatch(out, route, fieldName);
+                        allRoutes.add(new RouteWithTarget(route, fieldName));
                     }
+                }
+                allRoutes.sort((a, b) -> {
+                    // Count path parameter segments in each route
+                    long aParams = countPathParams(a.route.path());
+                    long bParams = countPathParams(b.route.path());
+                    // Routes with fewer path params (more specific) come first
+                    return Long.compare(aParams, bParams);
+                });
+                for (RouteWithTarget rwt : allRoutes) {
+                    generateRouteMatch(out, rwt.route, rwt.fieldName);
                 }
 
                 out.println("        return Response.status(404).body(\"Not Found\");");
@@ -793,4 +805,16 @@ public class RouteProcessor extends AbstractProcessor {
     private record ApiResponseInfo(int code, String description, String mediaType) {}
 
     private record RouteWithTag(RouteMethod route, String tagName) {}
+
+    private record RouteWithTarget(RouteMethod route, String fieldName) {}
+
+    private static long countPathParams(String path) {
+        long count = 0;
+        for (String seg : path.split("/")) {
+            if (seg.startsWith("{") && seg.endsWith("}")) {
+                count++;
+            }
+        }
+        return count;
+    }
 }
