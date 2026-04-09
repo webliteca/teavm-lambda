@@ -11,6 +11,7 @@ import org.teavm.jso.JSBody;
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSObject;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -162,6 +163,14 @@ public final class CloudRunAdapter {
             + "res.end(body || '');")
     private static native void sendResponse(JSObject res, int statusCode, String[] headersArr, String body);
 
+    @JSBody(params = {"res", "statusCode", "headersArr", "base64Body"}, script = ""
+            + "for (var i = 0; i < headersArr.length; i += 2) {"
+            + "  res.setHeader(headersArr[i], headersArr[i + 1]);"
+            + "}"
+            + "res.writeHead(statusCode);"
+            + "res.end(Buffer.from(base64Body, 'base64'));")
+    private static native void sendBinaryResponse(JSObject res, int statusCode, String[] headersArr, String base64Body);
+
     @JSBody(script = "return typeof process !== 'undefined' && typeof process.hrtime === 'function'"
             + " ? Number(process.hrtime.bigint()) / 1e6 : Date.now();")
     private static native double now();
@@ -191,7 +200,12 @@ public final class CloudRunAdapter {
                     + ",\"duration_ms\":" + Math.round(duration) + "}");
 
             String[] headersArr = mapToEntries(response.getHeaders());
-            sendResponse(res, response.getStatusCode(), headersArr, response.getBody());
+            if (response.getBodyBytes() != null) {
+                String base64 = Base64.getEncoder().encodeToString(response.getBodyBytes());
+                sendBinaryResponse(res, response.getStatusCode(), headersArr, base64);
+            } else {
+                sendResponse(res, response.getStatusCode(), headersArr, response.getBody());
+            }
         } catch (Exception e) {
             double duration = now() - startTime;
             logger.error("request failed", e);

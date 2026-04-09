@@ -103,7 +103,12 @@ public abstract class WarServlet extends HttpServlet {
 
             resp.setStatus(response.getStatusCode());
 
-            if (response.getBody() != null && !response.getBody().isEmpty()) {
+            if (response.getBodyBytes() != null) {
+                resp.setContentLength(response.getBodyBytes().length);
+                try (OutputStream os = resp.getOutputStream()) {
+                    os.write(response.getBodyBytes());
+                }
+            } else if (response.getBody() != null && !response.getBody().isEmpty()) {
                 byte[] responseBody = response.getBody().getBytes(StandardCharsets.UTF_8);
                 resp.setContentLength(responseBody.length);
                 try (OutputStream os = resp.getOutputStream()) {

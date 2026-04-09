@@ -11,6 +11,7 @@ import org.teavm.jso.JSBody;
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSObject;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -107,6 +108,14 @@ public final class LambdaAdapter {
             + "return { statusCode: statusCode, headers: headers, body: body || '' };")
     private static native JSObject createApiGatewayResponse(int statusCode, String body, String[] headersArr);
 
+    @JSBody(params = {"statusCode", "base64Body", "headersArr"}, script = ""
+            + "var headers = {};"
+            + "for (var i = 0; i < headersArr.length; i += 2) {"
+            + "  headers[headersArr[i]] = headersArr[i + 1];"
+            + "}"
+            + "return { statusCode: statusCode, headers: headers, body: base64Body, isBase64Encoded: true };")
+    private static native JSObject createBinaryApiGatewayResponse(int statusCode, String base64Body, String[] headersArr);
+
     @JSBody(params = {"message"}, script = "return { message: String(message) };")
     private static native JSObject createErrorObject(String message);
 
@@ -139,7 +148,13 @@ public final class LambdaAdapter {
                     + ",\"duration_ms\":" + Math.round(duration) + "}");
 
             String[] headersArr = mapToEntries(response.getHeaders());
-            JSObject result = createApiGatewayResponse(response.getStatusCode(), response.getBody(), headersArr);
+            JSObject result;
+            if (response.getBodyBytes() != null) {
+                String base64 = Base64.getEncoder().encodeToString(response.getBodyBytes());
+                result = createBinaryApiGatewayResponse(response.getStatusCode(), base64, headersArr);
+            } else {
+                result = createApiGatewayResponse(response.getStatusCode(), response.getBody(), headersArr);
+            }
             resolve.call(result);
         } catch (Exception e) {
             double duration = now() - startTime;

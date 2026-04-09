@@ -9,29 +9,35 @@ public final class Response {
     private final int statusCode;
     private final Map<String, String> headers;
     private final String body;
+    private final byte[] bodyBytes;
 
-    private Response(int statusCode, Map<String, String> headers, String body) {
+    private Response(int statusCode, Map<String, String> headers, String body, byte[] bodyBytes) {
         this.statusCode = statusCode;
         this.headers = Collections.unmodifiableMap(new HashMap<>(headers));
         this.body = body;
+        this.bodyBytes = bodyBytes;
     }
 
     public static Response ok(String body) {
-        return new Response(200, Collections.emptyMap(), body);
+        return new Response(200, Collections.emptyMap(), body, null);
     }
 
     public static Response status(int statusCode) {
-        return new Response(statusCode, Collections.emptyMap(), null);
+        return new Response(statusCode, Collections.emptyMap(), null, null);
     }
 
     public Response header(String name, String value) {
         Map<String, String> newHeaders = new HashMap<>(this.headers);
         newHeaders.put(name, value);
-        return new Response(this.statusCode, newHeaders, this.body);
+        return new Response(this.statusCode, newHeaders, this.body, this.bodyBytes);
     }
 
     public Response body(String body) {
-        return new Response(this.statusCode, this.headers, body);
+        return new Response(this.statusCode, this.headers, body, null);
+    }
+
+    public Response bodyBytes(byte[] bytes) {
+        return new Response(this.statusCode, this.headers, null, bytes);
     }
 
     public int getStatusCode() {
@@ -44,5 +50,9 @@ public final class Response {
 
     public String getBody() {
         return body;
+    }
+
+    public byte[] getBodyBytes() {
+        return bodyBytes;
     }
 }
