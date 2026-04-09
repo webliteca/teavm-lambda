@@ -164,9 +164,14 @@ public final class HttpServerAdapter {
                 exchange.getResponseHeaders().set(header.getKey(), header.getValue());
             }
 
-            byte[] responseBody = response.getBody() != null
-                    ? response.getBody().getBytes(StandardCharsets.UTF_8)
-                    : new byte[0];
+            byte[] responseBody;
+            if (response.getBodyBytes() != null) {
+                responseBody = response.getBodyBytes();
+            } else if (response.getBody() != null) {
+                responseBody = response.getBody().getBytes(StandardCharsets.UTF_8);
+            } else {
+                responseBody = new byte[0];
+            }
             exchange.sendResponseHeaders(response.getStatusCode(),
                     responseBody.length > 0 ? responseBody.length : -1);
             if (responseBody.length > 0) {
