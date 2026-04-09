@@ -11,6 +11,13 @@ import java.net.URI;
 /**
  * JVM-based ObjectStore provider for Amazon S3.
  * Discovered via ServiceLoader.
+ *
+ * <p>Connection URI formats:</p>
+ * <ul>
+ *   <li>{@code s3://us-east-1} - S3 in us-east-1</li>
+ *   <li>{@code s3://localhost:9000} - MinIO / S3-compatible local endpoint (HTTP)</li>
+ *   <li>{@code s3://account.r2.cloudflarestorage.com} - S3-compatible HTTPS endpoint (e.g. CloudFlare R2)</li>
+ * </ul>
  */
 public class AwsS3ObjectStoreProvider implements ObjectStoreProvider {
 
@@ -28,6 +35,10 @@ public class AwsS3ObjectStoreProvider implements ObjectStoreProvider {
         if (remainder.contains(":")) {
             builder.endpointOverride(URI.create("http://" + remainder))
                     .region(Region.US_EAST_1)
+                    .forcePathStyle(true);
+        } else if (remainder.contains(".")) {
+            builder.endpointOverride(URI.create("https://" + remainder))
+                    .region(Region.of("auto"))
                     .forcePathStyle(true);
         } else {
             builder.region(Region.of(remainder));

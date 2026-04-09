@@ -11,7 +11,8 @@ import org.teavm.jso.JSObject;
  * <p>Connection URI formats:</p>
  * <ul>
  *   <li>{@code s3://us-east-1} - S3 in us-east-1</li>
- *   <li>{@code s3://localhost:9000} - MinIO / S3-compatible local endpoint</li>
+ *   <li>{@code s3://localhost:9000} - MinIO / S3-compatible local endpoint (HTTP)</li>
+ *   <li>{@code s3://account.r2.cloudflarestorage.com} - S3-compatible HTTPS endpoint (e.g. CloudFlare R2)</li>
  * </ul>
  */
 public class S3ObjectStoreProvider implements ObjectStoreProvider {
@@ -44,6 +45,10 @@ public class S3ObjectStoreProvider implements ObjectStoreProvider {
         if (hostOrRegion.contains(":")) {
             endpoint = "http://" + hostOrRegion;
             region = "us-east-1";
+            forcePathStyle = true;
+        } else if (hostOrRegion.contains(".")) {
+            endpoint = "https://" + hostOrRegion;
+            region = "auto";
             forcePathStyle = true;
         } else {
             region = hostOrRegion;
