@@ -1137,8 +1137,15 @@ A middleware either:
 
 Use `MiddlewareRouter` to wrap a router with a chain of middleware:
 
+NOTE: `MiddlewareRouter` is in `ca.weblite.teavmlambda.api`, not in the `middleware` sub-package.
+`CorsMiddleware` and `CompressionMiddleware` are in `ca.weblite.teavmlambda.api.middleware`.
+
 [source,java]
 ----
+import ca.weblite.teavmlambda.api.MiddlewareRouter;
+import ca.weblite.teavmlambda.api.middleware.CorsMiddleware;
+import ca.weblite.teavmlambda.api.middleware.CompressionMiddleware;
+
 Router router = new MiddlewareRouter(new GeneratedRouter(container))
     .use(health)                               // Health check endpoints
     .use(CorsMiddleware.builder().build())      // CORS headers
