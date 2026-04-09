@@ -8,6 +8,7 @@ import ca.weblite.teavmlambda.api.Request;
 import ca.weblite.teavmlambda.api.Response;
 import ca.weblite.teavmlambda.api.Router;
 
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -66,7 +67,12 @@ public class JvmLambdaAdapter
             APIGatewayProxyResponseEvent apiResponse = new APIGatewayProxyResponseEvent();
             apiResponse.setStatusCode(response.getStatusCode());
             apiResponse.setHeaders(new HashMap<>(response.getHeaders()));
-            apiResponse.setBody(response.getBody() != null ? response.getBody() : "");
+            if (response.getBodyBytes() != null) {
+                apiResponse.setBody(Base64.getEncoder().encodeToString(response.getBodyBytes()));
+                apiResponse.setIsBase64Encoded(true);
+            } else {
+                apiResponse.setBody(response.getBody() != null ? response.getBody() : "");
+            }
             return apiResponse;
         } catch (Exception e) {
             long durationMs = (System.nanoTime() - startTime) / 1_000_000;
