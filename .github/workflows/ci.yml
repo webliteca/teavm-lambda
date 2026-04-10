@@ -290,8 +290,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
           server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
       - name: Deploy snapshots to GitHub Packages
-        run: mvn -B clean package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
+        run: mvn -B clean package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -P skills-jar -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
         env:
+          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
