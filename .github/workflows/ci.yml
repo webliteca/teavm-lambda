@@ -19,9 +19,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: PACKAGES_READ_TOKEN
 
       - name: Build all modules
         run: mvn -B clean package -DskipTests
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          PACKAGES_READ_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
 
       - name: Check SPI platform parity
         run: ./check-spi-parity.sh
