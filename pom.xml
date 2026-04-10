@@ -278,6 +278,13 @@
         </dependencies>
     </dependencyManagement>
 
+    <pluginRepositories>
+        <pluginRepository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/webliteca/skills-jar-maven-plugin</url>
+        </pluginRepository>
+    </pluginRepositories>
+
     <build>
         <plugins>
             <plugin>
@@ -289,6 +296,21 @@
                     <publishingServerId>central</publishingServerId>
                     <autoPublish>true</autoPublish>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>ca.weblite</groupId>
+                <artifactId>skills-jar-plugin</artifactId>
+                <version>0.1.0</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>skills-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
