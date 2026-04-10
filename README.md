@@ -76,6 +76,47 @@ Path traversal is blocked and MIME types are detected from file extensions.
 | `teavm-lambda-demo` | Demo REST API for AWS Lambda |
 | `teavm-lambda-demo-cloudrun` | Demo REST API + static web UI for Cloud Run |
 
+## Claude Code Skill
+
+This project ships a [Claude Code](https://claude.ai/code) skill that teaches Claude how to build, deploy, and debug teavm-lambda applications. It includes API references, pom.xml templates, example projects, and common gotchas.
+
+### Install from GitHub Packages
+
+Download and extract the skills JAR into your project or home directory:
+
+```bash
+# Project-level (applies to this project only)
+mvn dependency:copy -Dartifact=ca.weblite:teavm-lambda-parent:0.1.0-SNAPSHOT:jar:skills \
+  -DoutputDirectory=/tmp/teavm-lambda-skill \
+  -Dmdep.stripVersion=true
+mkdir -p .claude/skills/teavm-lambda
+unzip -o /tmp/teavm-lambda-skill/teavm-lambda-parent-skills.jar -d .claude/skills/teavm-lambda
+
+# Or user-level (applies to all your projects)
+mkdir -p ~/.claude/skills/teavm-lambda
+unzip -o /tmp/teavm-lambda-skill/teavm-lambda-parent-skills.jar -d ~/.claude/skills/teavm-lambda
+```
+
+### Install from source
+
+If you have the teavm-lambda repo cloned:
+
+```bash
+# Project-level
+cp -r /path/to/teavm-lambda/skills/teavm-lambda .claude/skills/teavm-lambda
+
+# Or user-level
+cp -r /path/to/teavm-lambda/skills/teavm-lambda ~/.claude/skills/teavm-lambda
+```
+
+### What's included
+
+| Directory | Contents |
+|-----------|----------|
+| `SKILL.md` | Main skill definition — quickstart, annotations, API reference, middleware, deployment |
+| `references/` | 12 deep-dive docs: API signatures, pom.xml templates, routing, security, database, deployments, gotchas |
+| `assets/examples/` | 4 starter projects: minimal-hello, crud-postgres, jwt-protected, cloudrun-deploy |
+
 ## Testing
 
 ```bash

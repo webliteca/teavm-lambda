@@ -295,6 +295,37 @@
 
     <profiles>
         <profile>
+            <id>skills-jar</id>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>github</id>
+                    <url>https://maven.pkg.github.com/webliteca/skills-jar-maven-plugin</url>
+                </pluginRepository>
+            </pluginRepositories>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>ca.weblite</groupId>
+                        <artifactId>skills-jar-plugin</artifactId>
+                        <version>0.1.1</version>
+                        <inherited>false</inherited>
+                        <configuration>
+                            <skillDirectory>${project.basedir}/skills/teavm-lambda</skillDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>skills-jar</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>package</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>sign-artifacts</id>
             <build>
                 <plugins>

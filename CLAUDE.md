@@ -150,6 +150,42 @@ Multi-module Maven project:
 | `jvm-server` | javac → bytecode, maven-shade uber JAR | Single JAR in `target/` | `teavm-lambda-adapter-httpserver` |
 | `jvm-war` | javac → bytecode, maven-war WAR | WAR file in `target/` | `teavm-lambda-adapter-war` |
 
+## Claude Code Skill
+
+A Claude Code skill is packaged from `skills/teavm-lambda/` via the `skills-jar` Maven profile. The skill JAR is deployed to GitHub Packages alongside the library artifacts.
+
+### Building the skill JAR
+
+```bash
+mvn clean package -P skills-jar
+# Produces target/teavm-lambda-parent-0.1.0-SNAPSHOT-skills.jar
+```
+
+The `skills-jar` profile requires GitHub Packages authentication (configured in CI via `PACKAGES_READ_TOKEN`). Builds without the profile skip the plugin entirely.
+
+### Installing the skill
+
+```bash
+# From source (into another project)
+cp -r skills/teavm-lambda /path/to/project/.claude/skills/teavm-lambda
+
+# From source (user-level, all projects)
+cp -r skills/teavm-lambda ~/.claude/skills/teavm-lambda
+
+# From GitHub Packages JAR
+mvn dependency:copy -Dartifact=ca.weblite:teavm-lambda-parent:0.1.0-SNAPSHOT:jar:skills \
+  -DoutputDirectory=/tmp/teavm-lambda-skill -Dmdep.stripVersion=true
+mkdir -p ~/.claude/skills/teavm-lambda
+unzip -o /tmp/teavm-lambda-skill/teavm-lambda-parent-skills.jar -d ~/.claude/skills/teavm-lambda
+```
+
+### Skill contents
+
+- `SKILL.md` — main skill definition (quickstart, annotations, API reference, middleware, deployment)
+- `references/` — 12 deep-dive docs (API signatures, pom.xml templates, routing, security, database, deployments, gotchas)
+- `assets/examples/` — 4 starter projects (minimal-hello, crud-postgres, jwt-protected, cloudrun-deploy)
+- `scripts/` — `generate-api-signatures.sh` regenerates `references/api-signatures.md` from source
+
 ## Code Conventions
 
 - Standard Maven layout: `src/main/java/`
