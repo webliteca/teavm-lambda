@@ -152,16 +152,14 @@ Multi-module Maven project:
 
 ## Claude Code Skill
 
-A Claude Code skill is packaged from `skills/teavm-lambda/` via the `skills-jar` Maven profile. The skill JAR is deployed to GitHub Packages alongside the library artifacts.
+A Claude Code skill is packaged from `skills/teavm-lambda/` via the `skills-jar-plugin` (published on Maven Central). The skill JAR is built automatically during `mvn package` and deployed alongside the library artifacts.
 
 ### Building the skill JAR
 
 ```bash
-mvn clean package -P skills-jar
+mvn clean package
 # Produces target/teavm-lambda-parent-0.1.0-SNAPSHOT-skills.jar
 ```
-
-The `skills-jar` profile requires GitHub Packages authentication (configured in CI via `PACKAGES_READ_TOKEN`). Builds without the profile skip the plugin entirely.
 
 ### Installing the skill
 
