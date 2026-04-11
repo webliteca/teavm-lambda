@@ -19,15 +19,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-          server-id: github
-          server-username: GITHUB_ACTOR
-          server-password: PACKAGES_READ_TOKEN
 
       - name: Build all modules
-        run: mvn -B clean package -DskipTests -P skills-jar
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          PACKAGES_READ_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
+        run: mvn -B clean package -DskipTests
 
       - name: Check SPI platform parity
         run: ./check-spi-parity.sh
@@ -294,7 +288,7 @@ jobs:
           server-password: GITHUB_TOKEN
 
       - name: Deploy snapshots to GitHub Packages
-        run: mvn -B clean package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -P skills-jar -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
+        run: mvn -B clean package org.apache.maven.plugins:maven-deploy-plugin:3.1.2:deploy -DskipTests -DaltDeploymentRepository=github::https://maven.pkg.github.com/webliteca/teavm-lambda
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
