@@ -168,7 +168,7 @@ Run: `java -jar target/my-app-1.0-SNAPSHOT.jar`
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
-        <teavm.version>0.10.2</teavm.version>
+        <teavm.version>0.13.1</teavm.version>
     </properties>
 
     <dependencies>

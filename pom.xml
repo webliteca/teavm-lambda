@@ -85,7 +85,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>21</maven.compiler.release>
-        <teavm.version>0.10.2</teavm.version>
+        <teavm.version>0.13.1</teavm.version>
     </properties>
 
     <dependencyManagement>

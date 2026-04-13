@@ -121,7 +121,7 @@ Multi-module Maven project:
 
 ## Key Dependencies
 
-- **TeaVM 0.10.2** — Java-to-JavaScript compiler (classlib, jso, jso-apis, maven-plugin)
+- **TeaVM 0.13.1** — Java-to-JavaScript compiler (classlib, jso, jso-apis, maven-plugin)
 - **Node.js pg ^8.13.0** — PostgreSQL client (runtime, accessed via JSO interop)
 - **PostgreSQL JDBC 42.7.3** — JDBC driver for JVM profiles
 - **Jakarta Servlet API 6.0.0** — Servlet API for WAR deployment (provided scope)
