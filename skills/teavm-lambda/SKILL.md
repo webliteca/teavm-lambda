@@ -329,6 +329,7 @@ Read these for in-depth coverage:
 Copy and adapt these complete, runnable projects:
 
 - `assets/examples/minimal-hello/` — smallest working app (Main + HelloResource + pom.xml)
+- `assets/examples/kotlin-hello/` — smallest Kotlin DSL app (single Main.kt + pom.xml)
 - `assets/examples/crud-postgres/` — CRUD with PostgreSQL repository pattern
 - `assets/examples/jwt-protected/` — JWT auth with @RolesAllowed and SecurityContext
 - `assets/examples/cloudrun-deploy/` — Cloud Run deployment with Dockerfile
