@@ -1,0 +1,12 @@
+{
+  "name": "teavm-lambda-todo-app",
+  "version": "1.0.0",
+  "description": "Todo app built with TeaVM Lambda in Kotlin",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

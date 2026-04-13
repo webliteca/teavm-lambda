@@ -79,6 +79,7 @@
         <module>teavm-lambda-pubsub-jvm</module>
         <module>teavm-lambda-demo-objectstore</module>
         <module>teavm-lambda-demo-messagequeue</module>
+        <module>teavm-lambda-demo-kotlin-todo</module>
         <module>teavm-lambda-kotlin</module>
     </modules>
 
@@ -90,6 +91,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-core</artifactId>
+                <version>${teavm.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.teavm</groupId>
                 <artifactId>teavm-classlib</artifactId>
@@ -279,6 +285,26 @@
     </dependencyManagement>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.teavm</groupId>
+                    <artifactId>teavm-maven-plugin</artifactId>
+                    <version>${teavm.version}</version>
+                    <configuration>
+                        <compileScopes>
+                            <scope>compile</scope>
+                            <scope>runtime</scope>
+                        </compileScopes>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.sonatype.central</groupId>
