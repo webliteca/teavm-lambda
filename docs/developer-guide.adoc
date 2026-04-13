@@ -13,7 +13,7 @@
 :idseparator: -
 :project-version: 0.1.0-SNAPSHOT
 :java-version: 21
-:teavm-version: 0.10.2
+:teavm-version: 0.13.1
 :nodejs-version: 22
 :maven-version: 3.9+
 
@@ -2542,7 +2542,7 @@ For the `teavm` profile, configure the TeaVM compiler:
 <plugin>
     <groupId>org.teavm</groupId>
     <artifactId>teavm-maven-plugin</artifactId>
-    <version>0.10.2</version>
+    <version>0.13.1</version>
     <executions>
         <execution>
             <goals><goal>compile</goal></goals>
