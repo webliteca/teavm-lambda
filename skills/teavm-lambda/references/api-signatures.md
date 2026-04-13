@@ -368,3 +368,135 @@
 - `protected abstract Router createRouter()` — called once during init()
 - Annotate subclass with `@WebServlet(urlPatterns = "/*")`
 - Do NOT call `Platform.start()` — the servlet container manages the lifecycle
+
+---
+
+## ca.weblite.teavmlambda.dsl (Kotlin DSL — JVM only)
+
+### Top-level functions
+- `fun app(block: AppScope.() -> Unit)` — configure and start the platform
+- `fun router(block: AppScope.() -> Unit): Router` — build router without starting
+- `fun json(block: JsonObjectScope.() -> Unit): String` — build JSON object string
+- `fun jsonArray(block: JsonArrayScope.() -> Unit): JsonArrayValue` — build JSON array (for embedding)
+- `fun jsonArrayString(block: JsonArrayScope.() -> Unit): String` — build JSON array as raw string
+- `fun validate(block: ValidationScope.() -> Unit)` — validate and throw on errors
+- `fun validationResult(block: ValidationScope.() -> Unit): ValidationResult` — validate without throwing
+- `fun Iterable<JsonSerializable>.toJsonArray(): String` — serialize list to JSON array
+
+### AppScope
+- `fun env(name: String): String`
+- `fun env(name: String, default: String): String`
+- `fun cors(block: CorsMiddleware.Builder.() -> Unit = {})` — add CORS middleware
+- `fun healthCheck(path: String = "/health", body: String = ...)` — add health endpoint
+- `fun middleware(handler: (Request, (Request) -> Response) -> Response)` — custom middleware
+- `fun use(middleware: Middleware)` — add Java Middleware
+- `fun services(block: ServiceScope.() -> Unit)` — configure DI
+- `fun routes(block: RoutingScope.() -> Unit)` — define routes
+
+### ServiceScope
+- `fun <T> bind(type: Class<T>, factory: () -> T)`
+- `fun <T> singleton(type: Class<T>, factory: () -> T)`
+- `inline fun <reified T> singleton(noinline factory: () -> T)`
+- `fun <T> instance(type: Class<T>, instance: T)`
+- `inline fun <reified T> instance(instance: T)`
+- `fun <T> get(type: Class<T>): T`
+- `inline fun <reified T> get(): T`
+- `fun env(name: String): String`
+
+### RoutingScope
+- `operator fun String.invoke(block: RoutingScope.() -> Unit)` — nested path group
+- `fun get(handler: RouteHandler)` / `fun get(path: String, handler: RouteHandler)`
+- `fun post(handler)` / `fun post(path, handler)`
+- `fun put(handler)` / `fun put(path, handler)`
+- `fun patch(handler)` / `fun patch(path, handler)`
+- `fun delete(handler)` / `fun delete(path, handler)`
+- `fun head(handler)` / `fun options(handler)`
+
+### RequestContext (handler receiver)
+- `val request: Request` / `val container: Container`
+- `fun path(name: String): String` — path param, throws BadRequest if missing
+- `fun pathInt(name: String): Int` — path param as Int
+- `fun pathLong(name: String): Long`
+- `fun query(name: String): String?` / `fun query(name: String, default: String): String`
+- `fun queryInt(name: String): Int?` / `fun queryInt(name: String, default: Int): Int`
+- `fun header(name: String): String?` / `fun header(name: String, default: String): String`
+- `val body: String?` / `fun requireBody(): String` / `fun bodyJson(): JsonReader`
+- `fun <T> body(deserializer: JsonDeserializer<T>): T`
+- `inline fun <reified T> service(): T` / `fun <T> service(type: Class<T>): T`
+- `fun ok(body: JsonSerializable): Response` / `fun ok(body: String): Response`
+- `fun ok(items: List<JsonSerializable>): Response` / `fun ok(block: JsonObjectScope.() -> Unit): Response`
+- `fun created(body: JsonSerializable): Response` / `fun created(body: String): Response`
+- `fun noContent(): Response` / `fun status(code: Int): Response`
+- `fun respond(statusCode: Int, block: ResponseScope.() -> Unit): Response`
+
+### JsonObjectScope
+- `infix fun String.to(value: String?)` / `infix fun String.to(value: Int)` / `infix fun String.to(value: Long)`
+- `infix fun String.to(value: Double)` / `infix fun String.to(value: Boolean)`
+- `infix fun String.to(block: JsonObjectScope)` — nested object
+- `infix fun String.to(array: JsonArrayValue)` — nested array
+- `infix fun String.to(value: JsonSerializable?)` — embed serializable
+- `fun raw(key: String, rawJson: String?)` — embed pre-serialized JSON
+
+### JsonArrayScope
+- `fun add(rawJson: String)` / `fun addString(value: String?)` / `fun add(value: JsonSerializable)`
+- `fun addAll(values: Iterable<JsonSerializable>)` / `fun addObject(block: JsonObjectScope.() -> Unit)`
+
+### JsonSerializable (interface)
+- `fun toJson(): String`
+
+### JsonDeserializer\<T\> (interface)
+- `fun fromJson(json: String): T`
+
+### RowMapper\<T\> (interface)
+- `fun fromRow(row: DbRow): T`
+
+### HttpException (sealed class, extends RuntimeException)
+- `val status: Int` / `override val message: String`
+- `fun toProblemDetail(): ProblemDetail` / `fun toResponse(): Response`
+
+### Concrete exceptions (all extend HttpException)
+- `BadRequest(message = "Bad Request")` — 400
+- `Unauthorized(message = "Unauthorized")` — 401
+- `Forbidden(message = "Forbidden")` — 403
+- `NotFound(message = "Not Found")` — 404
+- `MethodNotAllowed(message = "Method Not Allowed")` — 405
+- `Conflict(message = "Conflict")` — 409
+- `UnprocessableEntity(message = "Unprocessable Entity")` — 422
+- `TooManyRequests(message = "Too Many Requests")` — 429
+- `InternalError(message = "Internal Server Error")` — 500
+
+### ValidationScope
+- `inline fun require(condition: Boolean, error: () -> Pair<String, String>)`
+- `fun notEmpty(value: String?, field: String, message: String = ...)`
+- `fun notBlank(value: String?, field: String, message: String = ...)`
+- `fun min(value: Int, min: Int, field: String, message: String = ...)`
+- `fun max(value: Int, max: Int, field: String, message: String = ...)`
+- `fun min(value: Long, min: Long, field: String, message: String = ...)`
+- `fun max(value: Long, max: Long, field: String, message: String = ...)`
+- `fun range(value: Int, range: IntRange, field: String, message: String = ...)`
+- `fun matches(value: String?, pattern: Regex, field: String, message: String = ...)`
+- `fun length(value: String?, min: Int = 0, max: Int = MAX_VALUE, field: String, message: String = ...)`
+
+### ValidationResult
+- `val errors: List<FieldError>` / `val isValid: Boolean`
+- `fun throwIfInvalid()` / `fun toJson(): String`
+
+### DbRow extensions
+- `fun DbRow.stringOrNull(column: String): String?`
+- `fun DbRow.int(column: String, default: Int = 0): Int`
+- `fun DbRow.double(column: String, default: Double = 0.0): Double`
+- `fun DbRow.bool(column: String, default: Boolean = false): Boolean`
+- `operator fun DbRow.get(column: String): String?`
+
+### DbResult extensions
+- `fun <T> DbResult.map(mapper: RowMapper<T>): List<T>`
+- `fun <T> DbResult.map(transform: (DbRow) -> T): List<T>`
+- `fun <T> DbResult.firstOrNull(mapper: RowMapper<T>): T?`
+- `fun <T> DbResult.firstOrNull(transform: (DbRow) -> T): T?`
+- `fun <T> DbResult.first(mapper: RowMapper<T>, message: String = "Not found"): T`
+- `val DbResult.isEmpty: Boolean` / `val DbResult.isNotEmpty: Boolean`
+
+### Database extensions
+- `fun <T> Database.queryAll(sql: String, mapper: RowMapper<T>): List<T>`
+- `fun <T> Database.queryAll(sql: String, vararg params: String, mapper: RowMapper<T>): List<T>`
+- `fun <T> Database.queryOne(sql: String, vararg params: String, mapper: RowMapper<T>): T?`

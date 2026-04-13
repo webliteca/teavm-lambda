@@ -429,3 +429,115 @@ See the `cloudrun-deploy` example project for the complete working pom.xml.
 
 Build: `mvn clean package`
 Deploy: `target/my-app-1.0-SNAPSHOT.war` to Tomcat 10.1+, TomEE 10+, or Jetty 12+.
+
+---
+
+## 5. Kotlin JVM Standalone Server (with DSL)
+
+Uses the Kotlin DSL module for routing, middleware, and DI. JVM-only — not compatible with TeaVM profiles.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>my-kotlin-app</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+        <kotlin.version>1.9.25</kotlin.version>
+    </properties>
+
+    <dependencies>
+        <!-- Kotlin DSL (brings in teavm-lambda-core and teavm-lambda-db-api) -->
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-kotlin</artifactId>
+            <version>${teavm-lambda.version}</version>
+        </dependency>
+        <!-- JVM platform implementations -->
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-core-jvm</artifactId>
+            <version>${teavm-lambda.version}</version>
+        </dependency>
+        <!-- JDK HttpServer adapter -->
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-adapter-httpserver</artifactId>
+            <version>${teavm-lambda.version}</version>
+        </dependency>
+        <!-- Kotlin stdlib -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>${kotlin.version}</version>
+        </dependency>
+
+        <!-- Uncomment to add PostgreSQL support -->
+        <!--
+        <dependency>
+            <groupId>ca.weblite</groupId>
+            <artifactId>teavm-lambda-db-jvm</artifactId>
+            <version>${teavm-lambda.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
+        -->
+    </dependencies>
+
+    <build>
+        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
+        <plugins>
+            <!-- Kotlin compiler -->
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <goals><goal>compile</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Uber JAR with ServiceLoader support -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.example.myapp.MainKt</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+Build: `mvn clean package`
+Run: `java -jar target/my-kotlin-app-1.0-SNAPSHOT.jar`
+
+**Note:** The Kotlin DSL does not use the annotation processor — routes are defined in code via `routes { }`. No `GeneratedRouter`/`GeneratedContainer` are generated. You can still use annotation-based routing in Kotlin by adding `teavm-lambda-processor` as in the Java templates.

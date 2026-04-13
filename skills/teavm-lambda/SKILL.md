@@ -3,6 +3,7 @@ name: teavm-lambda
 description: "Use this skill whenever the user is building, deploying, or debugging a teavm-lambda application — even if they only mention building a serverless Java app for Lambda or Cloud Run. Triggers on: teavm-lambda, TeaVM Lambda, Java serverless, compile Java to JavaScript for Lambda, JAX-RS Cloud Run, Java REST API serverless, zero-reflection Java framework, Java to Node.js compiler, WORA Java framework, Java compile-time DI."
 globs:
   - "**/*.java"
+  - "**/*.kt"
   - "**/pom.xml"
   - "**/template.yaml"
   - "**/Dockerfile"
@@ -234,6 +235,46 @@ Register each on the Container. See `references/nosql-objectstore-mq.md` for ful
 | `jvm-server` | javac→shade JAR | `adapter-httpserver` | `target/*.jar` | `java -jar` |
 | `jvm-war` | javac→WAR | `adapter-war` | `target/*.war` | Tomcat 10.1+ |
 
+## Kotlin DSL (JVM only)
+
+The `teavm-lambda-kotlin` module provides a Kotlin-idiomatic DSL for routing, middleware, DI, JSON, validation, and database access. It targets JVM profiles only (`jvm-server`, `jvm-war`) — not TeaVM/JS.
+
+```kotlin
+fun main() = app {
+    cors()
+    healthCheck("/health")
+
+    services {
+        bind(Database::class.java) { DatabaseFactory.create(env("DATABASE_URL")) }
+        singleton<ItemService> { ItemService(get()) }
+    }
+
+    routes {
+        "/items" {
+            get { ok(service<ItemService>().list()) }
+            post {
+                val req = body(CreateItemRequest)
+                validate {
+                    notEmpty(req.name, "name")
+                    min(req.quantity, 0, "quantity")
+                }
+                created(service<ItemService>().create(req))
+            }
+            "/{id}" {
+                get { ok(service<ItemService>().find(pathInt("id")) ?: throw NotFound()) }
+                delete { service<ItemService>().delete(pathInt("id")); noContent() }
+            }
+        }
+    }
+}
+```
+
+Key features: `app { }` / `router { }` entry points, nested path routing, `RequestContext` with `path()`, `pathInt()`, `query()`, `body()`, `service<T>()`, `ok()`, `created()`, `noContent()` helpers, `json { }` / `jsonArray { }` DSL, `validate { }` DSL, typed HTTP exceptions (`NotFound()`, `BadRequest()`, etc.), and `DbRow`/`DbResult` extensions.
+
+Dependency: `teavm-lambda-kotlin` (brings in `teavm-lambda-core` and `teavm-lambda-db-api`).
+
+See `references/kotlin-dsl.md` for the full API reference.
+
 ## Top Gotchas
 
 1. **`@Body String` is the only body binding.** No automatic JSON-to-POJO deserialization. Parse with `JsonReader.parse(body)`.
@@ -269,6 +310,7 @@ Register each on the Container. See `references/nosql-objectstore-mq.md` for ful
 
 Read these for in-depth coverage:
 
+- **Kotlin DSL** → `references/kotlin-dsl.md` — app{}, routing, JSON, validation, DB extensions
 - **API signatures** → `references/api-signatures.md` — every public class and method
 - **Routing & DI** → `references/routing-and-di.md` — @Path, parameters, DI wiring, validation, OpenAPI
 - **Middleware** → `references/middleware.md` — CORS, compression, health checks, custom middleware
