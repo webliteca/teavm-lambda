@@ -54,6 +54,7 @@ COPY teavm-lambda-demo-objectstore/pom.xml teavm-lambda-demo-objectstore/
 COPY teavm-lambda-demo-messagequeue/pom.xml teavm-lambda-demo-messagequeue/
 COPY teavm-lambda-demo-kotlin-todo/pom.xml teavm-lambda-demo-kotlin-todo/
 COPY teavm-lambda-kotlin/pom.xml teavm-lambda-kotlin/
+COPY skills/teavm-lambda skills/teavm-lambda/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo-cloudrun -am -q || true
 
@@ -70,7 +71,7 @@ COPY teavm-lambda-demo-cloudrun/src teavm-lambda-demo-cloudrun/src
 COPY teavm-lambda-demo-cloudrun/docker/package.json teavm-lambda-demo-cloudrun/docker/
 COPY teavm-lambda-demo-cloudrun/docker/server.js teavm-lambda-demo-cloudrun/docker/
 
-RUN mvn clean package -pl teavm-lambda-demo-cloudrun -am -Dexec.skip=true -q
+RUN mvn -B clean package -pl teavm-lambda-demo-cloudrun -am -Dexec.skip=true
 
 # Runtime stage
 FROM node:22-slim
