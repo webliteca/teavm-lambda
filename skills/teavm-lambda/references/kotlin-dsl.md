@@ -1,6 +1,6 @@
 # Kotlin DSL Reference
 
-> Kotlin-idiomatic DSL for teavm-lambda. **JVM profiles only** (`jvm-server`, `jvm-war`) — not compatible with TeaVM/JS compilation.
+> Kotlin-idiomatic DSL for teavm-lambda. Works with all deployment targets (JVM and TeaVM/JS).
 > Module: `teavm-lambda-kotlin` (depends on `teavm-lambda-core` and `teavm-lambda-db-api`).
 
 ---
@@ -318,4 +318,4 @@ fun main() {
 }
 ```
 
-This approach works with all profiles including TeaVM/JS (if you avoid Kotlin-stdlib-only APIs that TeaVM doesn't support). The DSL module (`teavm-lambda-kotlin`) is JVM-only.
+This approach works with all profiles including TeaVM/JS. Both the annotation-based style and the DSL module work across all deployment targets.

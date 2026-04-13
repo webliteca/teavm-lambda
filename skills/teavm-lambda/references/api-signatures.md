@@ -371,7 +371,7 @@
 
 ---
 
-## ca.weblite.teavmlambda.dsl (Kotlin DSL — JVM only)
+## ca.weblite.teavmlambda.dsl (Kotlin DSL)
 
 ### Top-level functions
 - `fun app(block: AppScope.() -> Unit)` — configure and start the platform

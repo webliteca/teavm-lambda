@@ -235,9 +235,9 @@ Register each on the Container. See `references/nosql-objectstore-mq.md` for ful
 | `jvm-server` | javac→shade JAR | `adapter-httpserver` | `target/*.jar` | `java -jar` |
 | `jvm-war` | javac→WAR | `adapter-war` | `target/*.war` | Tomcat 10.1+ |
 
-## Kotlin DSL (JVM only)
+## Kotlin DSL
 
-The `teavm-lambda-kotlin` module provides a Kotlin-idiomatic DSL for routing, middleware, DI, JSON, validation, and database access. It targets JVM profiles only (`jvm-server`, `jvm-war`) — not TeaVM/JS.
+The `teavm-lambda-kotlin` module provides a Kotlin-idiomatic DSL for routing, middleware, DI, JSON, validation, and database access. It works with all deployment targets (JVM and TeaVM/JS).
 
 ```kotlin
 fun main() = app {

@@ -434,7 +434,7 @@ Deploy: `target/my-app-1.0-SNAPSHOT.war` to Tomcat 10.1+, TomEE 10+, or Jetty 12
 
 ## 5. Kotlin JVM Standalone Server (with DSL)
 
-Uses the Kotlin DSL module for routing, middleware, and DI. JVM-only — not compatible with TeaVM profiles.
+Uses the Kotlin DSL module for routing, middleware, and DI.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
