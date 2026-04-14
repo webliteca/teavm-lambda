@@ -327,6 +327,7 @@ Read these for in-depth coverage:
 - **Deploy as WAR** → `references/deployment-war.md` — WarServlet, Tomcat/Jetty/TomEE
 - **POM templates** → `references/pom-templates.md` — copy-pasteable pom.xml for each target
 - **All gotchas** → `references/gotchas.md` — full list with wrong/correct code examples
+- **TeaVM interop** → `references/teavm-interop.md` — @JSBody, @JSFunctor, @Async, JSObject overlays, classlib limits
 
 ## Example Projects
 
