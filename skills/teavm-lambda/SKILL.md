@@ -207,6 +207,8 @@ Env vars: `JWT_SECRET` (HMAC) or `JWT_ALGORITHM=firebase` + `FIREBASE_PROJECT_ID
 Modules: `teavm-lambda-auth` (JS) or `teavm-lambda-auth-jvm` (JVM).
 
 ```java
+import ca.weblite.teavmlambda.api.auth.SecurityContext;
+
 @RolesAllowed({"user"})
 public Response me(SecurityContext ctx) {
     String userId = ctx.getSubject();
@@ -292,6 +294,8 @@ See `references/kotlin-dsl.md` for the full API reference.
 7. **Register external deps before constructing GeneratedRouter.** `container.register(Database.class, db)` must come before `new GeneratedRouter(container)`.
 
 8. **WAR: don't call `Platform.start()`.** Subclass `WarServlet`, override `createRouter()`, annotate with `@WebServlet(urlPatterns = "/*")`.
+
+9. **`SecurityContext` is in `ca.weblite.teavmlambda.api.auth`** — not in `ca.weblite.teavmlambda.api` alongside `Response` and `Request`. Import: `import ca.weblite.teavmlambda.api.auth.SecurityContext;`.
 
 ## Environment Variables
 
