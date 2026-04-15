@@ -1,8 +1,9 @@
-name: Publish Developer Guide
+name: Deploy Site
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,12 +15,51 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
+    name: Build & Deploy Site
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
 
-      - name: Build AsciiDoc to HTML
+    steps:
+      - name: Checkout teavm-lambda
+        uses: actions/checkout@v4
+
+      - name: Checkout teavm-react
+        uses: actions/checkout@v4
+        with:
+          repository: webliteca/teavm-react
+          path: teavm-react
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build teavm-react-core
+        run: |
+          cd teavm-react
+          mvn install -N -B -q
+          mvn install -pl teavm-react-core -B -q -DskipTests
+
+      - name: Build teavm-lambda (core modules)
+        run: |
+          mvn install -N -B -q
+          mvn install -pl teavm-lambda-core -B -q -DskipTests
+
+      - name: Build site
+        run: mvn process-classes -pl site -B
+
+      - name: Verify build output
+        run: |
+          test -f site/target/webapp/js/classes.js
+          test -f site/target/webapp/index.html
+          echo "classes.js: $(wc -c < site/target/webapp/js/classes.js) bytes"
+
+      - name: Build Developer Guide
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/documents" \
@@ -33,21 +73,18 @@ jobs:
               -a sectlinks \
               -a idprefix= \
               -a idseparator=- \
-              -D /documents/docs \
+              -D /documents/site/target/webapp/developer-guide \
               -o index.html \
               /documents/docs/developer-guide.adoc
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/
+          path: site/target/webapp
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deploy
         uses: actions/deploy-pages@v4
