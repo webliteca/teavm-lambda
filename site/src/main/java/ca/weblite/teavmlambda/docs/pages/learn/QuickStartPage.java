@@ -122,19 +122,107 @@ public class QuickStartPage {
             // Building and running
             .child(Section.create().className("doc-section")
                 .child(h2("Build and Run"))
-                .child(p("Build the project with Maven using the jvm profile, then run "
-                    + "the resulting uber JAR. The standalone HTTP server starts on port 8080 "
-                    + "by default."))
+                .child(p("teavm-lambda supports multiple deployment targets. The same application "
+                    + "code works with all of them \u2014 only the Maven profile and adapter dependency "
+                    + "change. Choose the target that fits your environment."))
+
+                // JVM Standalone
+                .child(h3("JVM Standalone Server"))
+                .child(p("The simplest way to run locally. Build an uber JAR with the built-in "
+                    + "HTTP server \u2014 no Docker or cloud tooling needed."))
                 .child(CodeBlock.create(
                     """
                     mvn clean package -P jvm
                     java -jar target/my-app-1.0.0-SNAPSHOT.jar""",
                     "bash"))
-                .child(p("To use a different port, set the PORT environment variable:"))
+                .child(p("The server starts on port 8080 by default. To use a different port, "
+                    + "set the PORT environment variable:"))
                 .child(CodeBlock.create(
                     "PORT=3000 java -jar target/my-app-1.0.0-SNAPSHOT.jar",
                     "bash"))
-                .child(p("Test your endpoint with curl:"))
+
+                // AWS Lambda
+                .child(h3("AWS Lambda (Local with SAM)"))
+                .child(p("The default profile compiles Java to JavaScript via TeaVM and "
+                    + "produces a Node.js Lambda package. Use AWS SAM CLI to run it locally."))
+                .child(p("First, create a template.yaml in your project root:"))
+                .child(CodeBlock.create(
+                    """
+                    AWSTemplateFormatVersion: '2010-09-09'
+                    Transform: AWS::Serverless-2016-10-31
+
+                    Globals:
+                      Function:
+                        Timeout: 30
+                        MemorySize: 256
+                        Runtime: nodejs22.x
+
+                    Resources:
+                      ApiFunction:
+                        Type: AWS::Serverless::Function
+                        Properties:
+                          CodeUri: target/lambda/
+                          Handler: index.handler
+                          Events:
+                            RootApi:
+                              Type: Api
+                              Properties:
+                                Path: /
+                                Method: ANY
+                            ProxyApi:
+                              Type: Api
+                              Properties:
+                                Path: /{proxy+}
+                                Method: ANY""",
+                    "yaml"))
+                .child(p("Then build and run:"))
+                .child(CodeBlock.create(
+                    """
+                    # Build the Lambda package (TeaVM compiles Java to JS)
+                    mvn clean package
+
+                    # Start the local Lambda API (requires SAM CLI and Docker)
+                    sam local start-api
+
+                    # Test (SAM defaults to port 3000)
+                    curl http://localhost:3000/hello""",
+                    "bash"))
+                .child(Callout.note("Prerequisites",
+                    p("Local Lambda testing requires the AWS SAM CLI and Docker. "
+                        + "Install SAM from https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html")))
+
+                // Cloud Run
+                .child(h3("Cloud Run (Local with Docker)"))
+                .child(p("Build a Docker image and run it locally. This mirrors the exact "
+                    + "environment your app will run in on Google Cloud Run."))
+                .child(p("Create a Dockerfile in your project:"))
+                .child(CodeBlock.create(
+                    """
+                    FROM maven:3.9-eclipse-temurin-21 AS build
+                    WORKDIR /app
+                    COPY pom.xml .
+                    COPY src src
+                    RUN mvn clean package -P jvm-server -q
+
+                    FROM eclipse-temurin:21-jre-alpine
+                    WORKDIR /app
+                    COPY --from=build /app/target/my-app-*.jar app.jar
+                    EXPOSE 8080
+                    CMD ["java", "-jar", "app.jar"]""",
+                    "bash"))
+                .child(p("Build and run:"))
+                .child(CodeBlock.create(
+                    """
+                    docker build -t my-app .
+                    docker run -p 8080:8080 my-app
+
+                    # Test
+                    curl http://localhost:8080/hello""",
+                    "bash"))
+
+                // Test section (applies to all)
+                .child(h3("Test Your Endpoint"))
+                .child(p("Regardless of how you started the server, test it with curl:"))
                 .child(CodeBlock.create(
                     """
                     curl http://localhost:8080/hello
@@ -142,7 +230,10 @@ public class QuickStartPage {
 
                     curl http://localhost:8080/hello/Alice
                     # {"message":"Hello, Alice!"}""",
-                    "bash")))
+                    "bash"))
+                .child(Callout.note("Port Differences",
+                    p("The JVM standalone and Cloud Run servers default to port 8080. "
+                        + "SAM local defaults to port 3000. Adjust the curl URL accordingly."))))
 
             // Annotation processor note
             .child(Section.create().className("doc-section")
