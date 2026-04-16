@@ -12,13 +12,14 @@ import static ca.weblite.teavmreact.html.Html.*;
 
 public class ProjectInitializer {
 
-    @JSBody(params = {"groupId", "artifactId", "packageName", "deployTarget"},
+    @JSBody(params = {"groupId", "artifactId", "packageName", "deployTarget", "language"},
             script =
         "var zip = new JSZip();" +
         "var pkgPath = packageName.replace(/\\./g, '/');" +
+        "var isKotlin = (language === 'kotlin');" +
 
-        // pom.xml
-        "var pom = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'" +
+        // ---- pom.xml (Java) ----
+        "var pomJava = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'" +
         " + '<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\\n'" +
         " + '         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\\n'" +
         " + '         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0\\n'" +
@@ -89,8 +90,84 @@ public class ProjectInitializer {
         " + '    </build>\\n'" +
         " + '</project>\\n';" +
 
-        // HelloResource.java
-        "var resource = 'package ' + packageName + ';\\n\\n'" +
+        // ---- pom.xml (Kotlin) ----
+        "var pomKotlin = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\\n'" +
+        " + '<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\\n'" +
+        " + '         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\\n'" +
+        " + '         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0\\n'" +
+        " + '           http://maven.apache.org/xsd/maven-4.0.0.xsd\">\\n'" +
+        " + '    <modelVersion>4.0.0</modelVersion>\\n\\n'" +
+        " + '    <groupId>' + groupId + '</groupId>\\n'" +
+        " + '    <artifactId>' + artifactId + '</artifactId>\\n'" +
+        " + '    <version>1.0.0-SNAPSHOT</version>\\n\\n'" +
+        " + '    <properties>\\n'" +
+        " + '        <kotlin.version>1.9.25</kotlin.version>\\n'" +
+        " + '        <teavm-lambda.version>0.1.6</teavm-lambda.version>\\n'" +
+        " + '    </properties>\\n\\n'" +
+        " + '    <dependencies>\\n'" +
+        " + '        <dependency>\\n'" +
+        " + '            <groupId>ca.weblite</groupId>\\n'" +
+        " + '            <artifactId>teavm-lambda-kotlin</artifactId>\\n'" +
+        " + '            <version>${teavm-lambda.version}</version>\\n'" +
+        " + '        </dependency>\\n'" +
+        " + '        <dependency>\\n'" +
+        " + '            <groupId>ca.weblite</groupId>\\n'" +
+        " + '            <artifactId>teavm-lambda-core-jvm</artifactId>\\n'" +
+        " + '            <version>${teavm-lambda.version}</version>\\n'" +
+        " + '        </dependency>\\n'" +
+        " + '        <dependency>\\n'" +
+        " + '            <groupId>ca.weblite</groupId>\\n'" +
+        " + '            <artifactId>teavm-lambda-adapter-httpserver</artifactId>\\n'" +
+        " + '            <version>${teavm-lambda.version}</version>\\n'" +
+        " + '        </dependency>\\n'" +
+        " + '        <dependency>\\n'" +
+        " + '            <groupId>org.jetbrains.kotlin</groupId>\\n'" +
+        " + '            <artifactId>kotlin-stdlib</artifactId>\\n'" +
+        " + '            <version>${kotlin.version}</version>\\n'" +
+        " + '        </dependency>\\n'" +
+        " + '    </dependencies>\\n\\n'" +
+        " + '    <build>\\n'" +
+        " + '        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>\\n'" +
+        " + '        <plugins>\\n'" +
+        " + '            <plugin>\\n'" +
+        " + '                <groupId>org.jetbrains.kotlin</groupId>\\n'" +
+        " + '                <artifactId>kotlin-maven-plugin</artifactId>\\n'" +
+        " + '                <version>${kotlin.version}</version>\\n'" +
+        " + '                <executions>\\n'" +
+        " + '                    <execution>\\n'" +
+        " + '                        <id>compile</id>\\n'" +
+        " + '                        <goals><goal>compile</goal></goals>\\n'" +
+        " + '                        <configuration>\\n'" +
+        " + '                            <jvmTarget>21</jvmTarget>\\n'" +
+        " + '                        </configuration>\\n'" +
+        " + '                    </execution>\\n'" +
+        " + '                </executions>\\n'" +
+        " + '            </plugin>\\n'" +
+        " + '            <plugin>\\n'" +
+        " + '                <groupId>org.apache.maven.plugins</groupId>\\n'" +
+        " + '                <artifactId>maven-shade-plugin</artifactId>\\n'" +
+        " + '                <version>3.5.3</version>\\n'" +
+        " + '                <executions>\\n'" +
+        " + '                    <execution>\\n'" +
+        " + '                        <phase>package</phase>\\n'" +
+        " + '                        <goals><goal>shade</goal></goals>\\n'" +
+        " + '                        <configuration>\\n'" +
+        " + '                            <transformers>\\n'" +
+        " + '                                <transformer implementation=\"org.apache.maven.plugins.shade.resource.ManifestResourceTransformer\">\\n'" +
+        " + '                                    <mainClass>' + packageName + '.MainKt</mainClass>\\n'" +
+        " + '                                </transformer>\\n'" +
+        " + '                                <transformer implementation=\"org.apache.maven.plugins.shade.resource.ServicesResourceTransformer\"/>\\n'" +
+        " + '                            </transformers>\\n'" +
+        " + '                        </configuration>\\n'" +
+        " + '                    </execution>\\n'" +
+        " + '                </executions>\\n'" +
+        " + '            </plugin>\\n'" +
+        " + '        </plugins>\\n'" +
+        " + '    </build>\\n'" +
+        " + '</project>\\n';" +
+
+        // ---- Java source files ----
+        "var resourceJava = 'package ' + packageName + ';\\n\\n'" +
         " + 'import ca.weblite.teavmlambda.api.Response;\\n'" +
         " + 'import ca.weblite.teavmlambda.api.annotation.*;\\n\\n'" +
         " + '@Path(\"/hello\")\\n'" +
@@ -110,8 +187,7 @@ public class ProjectInitializer {
         " + '    }\\n'" +
         " + '}\\n';" +
 
-        // Main.java
-        "var main = 'package ' + packageName + ';\\n\\n'" +
+        "var mainJava = 'package ' + packageName + ';\\n\\n'" +
         " + 'import ca.weblite.teavmlambda.api.Platform;\\n'" +
         " + 'import ca.weblite.teavmlambda.generated.GeneratedContainer;\\n'" +
         " + 'import ca.weblite.teavmlambda.generated.GeneratedRouter;\\n\\n'" +
@@ -123,13 +199,32 @@ public class ProjectInitializer {
         " + '    }\\n'" +
         " + '}\\n';" +
 
-        // Add files to zip
-        "var root = artifactId + '/';" +
-        "zip.file(root + 'pom.xml', pom);" +
-        "zip.file(root + 'src/main/java/' + pkgPath + '/HelloResource.java', resource);" +
-        "zip.file(root + 'src/main/java/' + pkgPath + '/Main.java', main);" +
+        // ---- Kotlin source file ----
+        "var mainKotlin = 'package ' + packageName + '\\n\\n'" +
+        " + 'import ca.weblite.teavmlambda.dsl.*\\n\\n'" +
+        " + 'fun main() = app {\\n'" +
+        " + '    routes {\\n'" +
+        " + '        \"/hello\" {\\n'" +
+        " + '            get { ok { \"message\" to \"Hello, World!\" } }\\n'" +
+        " + '            \"/{name}\" {\\n'" +
+        " + '                get { ok { \"message\" to \"Hello, ${path(\"name\")}!\" } }\\n'" +
+        " + '            }\\n'" +
+        " + '        }\\n'" +
+        " + '    }\\n'" +
+        " + '}\\n';" +
 
-        // Generate and trigger download
+        // ---- Add files to zip ----
+        "var root = artifactId + '/';" +
+        "if (isKotlin) {" +
+        "  zip.file(root + 'pom.xml', pomKotlin);" +
+        "  zip.file(root + 'src/main/kotlin/' + pkgPath + '/Main.kt', mainKotlin);" +
+        "} else {" +
+        "  zip.file(root + 'pom.xml', pomJava);" +
+        "  zip.file(root + 'src/main/java/' + pkgPath + '/HelloResource.java', resourceJava);" +
+        "  zip.file(root + 'src/main/java/' + pkgPath + '/Main.java', mainJava);" +
+        "}" +
+
+        // ---- Generate and trigger download ----
         "zip.generateAsync({type: 'blob', platform: 'UNIX'}).then(function(blob) {" +
         "  var link = document.createElement('a');" +
         "  link.href = URL.createObjectURL(blob);" +
@@ -141,7 +236,8 @@ public class ProjectInitializer {
         "});"
     )
     private static native void generateProject(
-            String groupId, String artifactId, String packageName, String deployTarget);
+            String groupId, String artifactId, String packageName,
+            String deployTarget, String language);
 
     public static ReactElement create() {
         return component(ProjectInitializer::render, "ProjectInitializer");
@@ -152,6 +248,7 @@ public class ProjectInitializer {
         var artifactId = Hooks.useState("my-teavm-lambda-app");
         var packageName = Hooks.useState("com.example");
         var deployTarget = Hooks.useState("jvm-server");
+        var language = Hooks.useState("java");
 
         return Div.create().className("project-initializer")
 
@@ -188,6 +285,15 @@ public class ProjectInitializer {
                         .onChange(e -> packageName.setString(e.getTarget().getValue()))))
 
                 .child(Div.create().className("pi-field")
+                    .child(Label.create().text("Language").prop("htmlFor", "pi-lang"))
+                    .child(Select.create()
+                        .id("pi-lang")
+                        .value(language.getString())
+                        .onChange(e -> language.setString(e.getTarget().getValue()))
+                        .child(option("java", "Java"))
+                        .child(option("kotlin", "Kotlin"))))
+
+                .child(Div.create().className("pi-field")
                     .child(Label.create().text("Deploy Target").prop("htmlFor", "pi-target"))
                     .child(Select.create()
                         .id("pi-target")
@@ -205,11 +311,13 @@ public class ProjectInitializer {
                         groupId.getString(),
                         artifactId.getString(),
                         packageName.getString(),
-                        deployTarget.getString()))))
+                        deployTarget.getString(),
+                        language.getString()))))
 
             .child(Div.create().className("pi-summary")
                 .child(P.create().text(
                     artifactId.getString() + ".zip  |  "
+                    + language.getString() + "  |  "
                     + packageName.getString() + "  |  " + deployTarget.getString())))
 
             .build();
