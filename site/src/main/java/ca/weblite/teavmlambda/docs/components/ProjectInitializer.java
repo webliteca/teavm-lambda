@@ -31,7 +31,7 @@ public class ProjectInitializer {
         " + '        <maven.compiler.source>21</maven.compiler.source>\\n'" +
         " + '        <maven.compiler.target>21</maven.compiler.target>\\n'" +
         " + '        <teavm.version>0.13.1</teavm.version>\\n'" +
-        " + '        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>\\n'" +
+        " + '        <teavm-lambda.version>0.1.6</teavm-lambda.version>\\n'" +
         " + '    </properties>\\n\\n'" +
         " + '    <dependencies>\\n'" +
         " + '        <dependency>\\n'" +
