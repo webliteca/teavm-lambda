@@ -59,6 +59,12 @@ jobs:
           test -f site/target/webapp/index.html
           echo "classes.js: $(wc -c < site/target/webapp/js/classes.js) bytes"
 
+      - name: Build Javadocs
+        run: |
+          mvn javadoc:javadoc -pl teavm-lambda-core -B -q
+          mkdir -p site/target/webapp/javadocs
+          cp -r teavm-lambda-core/target/site/apidocs/* site/target/webapp/javadocs/
+
       - name: Build Developer Guide
         run: |
           docker run --rm \

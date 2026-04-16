@@ -2,6 +2,7 @@ package ca.weblite.teavmlambda.docs;
 
 import ca.weblite.teavmreact.core.ReactDOM;
 import ca.weblite.teavmlambda.docs.pages.HomePage;
+import ca.weblite.teavmlambda.docs.pages.CreditsPage;
 import ca.weblite.teavmlambda.docs.pages.learn.*;
 import ca.weblite.teavmlambda.docs.pages.reference.*;
 import org.teavm.jso.dom.html.HTMLDocument;
@@ -30,6 +31,9 @@ public class App {
         new Route("reference/core-api", CoreApiPage::render),
         new Route("reference/kotlin-dsl", KotlinDslPage::render),
         new Route("reference/environment", EnvironmentPage::render),
+
+        // Credits
+        new Route("credits", CreditsPage::render),
     };
 
     public static void main(String[] args) {

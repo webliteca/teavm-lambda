@@ -45,7 +45,7 @@ public class InstallationPage {
                     <properties>
                         <maven.compiler.source>21</maven.compiler.source>
                         <maven.compiler.target>21</maven.compiler.target>
-                        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+                        <teavm-lambda.version>0.1.6</teavm-lambda.version>
                     </properties>
 
                     <dependencies>

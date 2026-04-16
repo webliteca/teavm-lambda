@@ -29,10 +29,13 @@ public class HomePage {
                     .child(a("API Reference").href("#/reference/annotations")
                         .className("btn btn-secondary").build())))
 
-            // Feature grid
-            .child(Section.create().className("feature-grid")
+            // Sponsor banner
+            .child(sponsorBanner())
+
+            // Feature section with heading above 2x2 grid
+            .child(Section.create().className("features-section")
                 .child(h2("Why teavm-lambda?"))
-                .child(Div.create().className("grid grid-4")
+                .child(Div.create().className("feature-grid")
                     .child(FeatureCard.create(
                         "Lightning-Fast Cold Starts",
                         "~100ms cold starts on AWS Lambda by compiling Java to JavaScript. "
@@ -89,6 +92,23 @@ public class HomePage {
                         }
                     }""")))
 
+            .build();
+    }
+
+    private static ReactElement sponsorBanner() {
+        return Div.create().className("sponsor-banner")
+            .child(Div.create().className("sponsor-banner-inner")
+                .child(Div.create().className("sponsor-banner-text")
+                    .child(El.span("sponsor-heart", text("\u2764")))
+                    .child(text(" This project is powered by "))
+                    .child(a("TeaVM").href("https://teavm.org").target("_blank").build())
+                    .child(text(". If you find it useful, please consider "))
+                    .child(a("sponsoring Alexey Andreev")
+                        .href("https://github.com/sponsors/konsoletyper")
+                        .target("_blank")
+                        .className("sponsor-link")
+                        .build())
+                    .child(text(", the creator of TeaVM."))))
             .build();
     }
 }
