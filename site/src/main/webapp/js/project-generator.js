@@ -280,6 +280,11 @@ function teavmDeps(adapterArtifact, v) {
 '                </dependency>\n' +
 '                <dependency>\n' +
 '                    <groupId>org.teavm</groupId>\n' +
+'                    <artifactId>teavm-core</artifactId>\n' +
+'                    <version>${teavm.version}</version>\n' +
+'                </dependency>\n' +
+'                <dependency>\n' +
+'                    <groupId>org.teavm</groupId>\n' +
 '                    <artifactId>teavm-jso</artifactId>\n' +
 '                    <version>${teavm.version}</version>\n' +
 '                </dependency>\n' +
