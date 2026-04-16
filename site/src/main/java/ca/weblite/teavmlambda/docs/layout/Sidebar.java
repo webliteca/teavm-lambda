@@ -31,7 +31,12 @@ public class Sidebar {
                 link("Annotations", "reference/annotations", currentPath, onClose),
                 link("Core API", "reference/core-api", currentPath, onClose),
                 link("Kotlin DSL", "reference/kotlin-dsl", currentPath, onClose),
-                link("Environment Variables", "reference/environment", currentPath, onClose)
+                link("Environment Variables", "reference/environment", currentPath, onClose),
+                externalLink("Developer Guide", "developer-guide/"),
+                externalLink("Javadocs", "javadocs/")
+            ))
+            .child(sidebarSection("About",
+                link("Credits", "credits", currentPath, onClose)
             ))
             .build();
     }
@@ -52,6 +57,15 @@ public class Sidebar {
             .className("sidebar-link" + (active ? " active" : ""))
             .onClick(e -> onClose.run())
             .text(label)
+            .build();
+    }
+
+    private static ReactElement externalLink(String label, String href) {
+        return A.create()
+            .href(href)
+            .prop("target", "_blank")
+            .className("sidebar-link sidebar-link-external")
+            .text(label + " \u2197")
             .build();
     }
 }
