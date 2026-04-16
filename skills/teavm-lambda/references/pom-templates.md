@@ -2,7 +2,7 @@
 
 > Copy-pasteable pom.xml files for each deployment target. Replace `com.example` with your groupId and `my-app` with your artifactId.
 
-**Prerequisites**: teavm-lambda artifacts must be available in your local Maven repo. If using SNAPSHOT versions, clone the teavm-lambda repo and run `mvn install` first.
+**Prerequisites**: teavm-lambda artifacts must be available in your local Maven repo or Maven Central.
 
 ---
 
@@ -19,14 +19,14 @@ Simplest setup. Good for local development and Docker deployment.
 
     <groupId>com.example</groupId>
     <artifactId>my-app</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+        <teavm-lambda.version>0.1.6</teavm-lambda.version>
     </properties>
 
     <dependencies>
@@ -145,7 +145,7 @@ Simplest setup. Good for local development and Docker deployment.
 ```
 
 Build: `mvn clean package`
-Run: `java -jar target/my-app-1.0-SNAPSHOT.jar`
+Run: `java -jar target/my-app-1.0.0.jar`
 
 ---
 
@@ -160,14 +160,14 @@ Run: `java -jar target/my-app-1.0-SNAPSHOT.jar`
 
     <groupId>com.example</groupId>
     <artifactId>my-app</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+        <teavm-lambda.version>0.1.6</teavm-lambda.version>
         <teavm.version>0.13.1</teavm.version>
     </properties>
 
@@ -352,14 +352,14 @@ See the `cloudrun-deploy` example project for the complete working pom.xml.
 
     <groupId>com.example</groupId>
     <artifactId>my-app</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>war</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+        <teavm-lambda.version>0.1.6</teavm-lambda.version>
     </properties>
 
     <dependencies>
@@ -428,7 +428,7 @@ See the `cloudrun-deploy` example project for the complete working pom.xml.
 ```
 
 Build: `mvn clean package`
-Deploy: `target/my-app-1.0-SNAPSHOT.war` to Tomcat 10.1+, TomEE 10+, or Jetty 12+.
+Deploy: `target/my-app-1.0.0.war` to Tomcat 10.1+, TomEE 10+, or Jetty 12+.
 
 ---
 
@@ -445,14 +445,14 @@ Uses the Kotlin DSL module for routing, middleware, and DI.
 
     <groupId>com.example</groupId>
     <artifactId>my-kotlin-app</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <teavm-lambda.version>0.1.0-SNAPSHOT</teavm-lambda.version>
+        <teavm-lambda.version>0.1.6</teavm-lambda.version>
         <kotlin.version>1.9.25</kotlin.version>
     </properties>
 
@@ -538,6 +538,6 @@ Uses the Kotlin DSL module for routing, middleware, and DI.
 ```
 
 Build: `mvn clean package`
-Run: `java -jar target/my-kotlin-app-1.0-SNAPSHOT.jar`
+Run: `java -jar target/my-kotlin-app-1.0.0.jar`
 
 **Note:** The Kotlin DSL does not use the annotation processor — routes are defined in code via `routes { }`. No `GeneratedRouter`/`GeneratedContainer` are generated. You can still use annotation-based routing in Kotlin by adding `teavm-lambda-processor` as in the Java templates.

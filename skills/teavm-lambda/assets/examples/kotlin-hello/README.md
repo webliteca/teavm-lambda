@@ -12,7 +12,7 @@ The smallest working teavm-lambda application using the Kotlin DSL. One file, on
 
 ```bash
 mvn clean package
-java -jar target/kotlin-hello-1.0-SNAPSHOT.jar
+java -jar target/kotlin-hello-1.0.0.jar
 ```
 
 ## Test

@@ -40,7 +40,7 @@ public class InstallationPage {
                     mvn archetype:generate \\
                         -DarchetypeGroupId=ca.weblite \\
                         -DarchetypeArtifactId=teavm-lambda-archetype \\
-                        -DarchetypeVersion=0.1.0-SNAPSHOT \\
+                        -DarchetypeVersion=0.1.6 \\
                         -DgroupId=com.example \\
                         -DartifactId=my-app \\
                         -Dpackage=com.example \\
@@ -52,7 +52,7 @@ public class InstallationPage {
                     mvn archetype:generate \\
                         -DarchetypeGroupId=ca.weblite \\
                         -DarchetypeArtifactId=teavm-lambda-archetype-kotlin \\
-                        -DarchetypeVersion=0.1.0-SNAPSHOT \\
+                        -DarchetypeVersion=0.1.6 \\
                         -DgroupId=com.example \\
                         -DartifactId=my-app \\
                         -Dpackage=com.example \\

@@ -91,11 +91,11 @@ public class DeploymentPage {
             .child(CodeBlock.create(
                 """
                 mvn clean package
-                java -jar target/my-app-1.0.0-SNAPSHOT.jar""",
+                java -jar target/my-app-1.0.0.jar""",
                 "bash"))
             .child(h3("Custom Port"))
             .child(CodeBlock.create(
-                "PORT=3000 java -jar target/my-app-1.0.0-SNAPSHOT.jar",
+                "PORT=3000 java -jar target/my-app-1.0.0.jar",
                 "bash"))
             .child(h3("Docker Deployment"))
             .child(p("You can also run the JVM server in a container:"))
@@ -251,11 +251,11 @@ public class DeploymentPage {
             .child(CodeBlock.create(
                 """
                 # Copy to Tomcat webapps
-                cp target/my-app-1.0.0-SNAPSHOT.war $CATALINA_HOME/webapps/my-app.war
+                cp target/my-app-1.0.0.war $CATALINA_HOME/webapps/my-app.war
 
                 # Or run with Docker
                 docker run -p 8080:8080 \\
-                    -v $(pwd)/target/my-app-1.0.0-SNAPSHOT.war:/usr/local/tomcat/webapps/ROOT.war \\
+                    -v $(pwd)/target/my-app-1.0.0.war:/usr/local/tomcat/webapps/ROOT.war \\
                     tomcat:11""",
                 "bash"))
             .child(Callout.pitfall("Platform.start() not used",

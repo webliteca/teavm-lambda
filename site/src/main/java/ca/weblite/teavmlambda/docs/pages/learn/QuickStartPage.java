@@ -141,12 +141,12 @@ public class QuickStartPage {
                 .child(CodeBlock.create(
                     """
                     mvn clean package
-                    java -jar target/my-app-1.0.0-SNAPSHOT.jar""",
+                    java -jar target/my-app-1.0.0.jar""",
                     "bash"))
                 .child(p("The server starts on port 8080 by default. Set the PORT "
                     + "environment variable to change it:"))
                 .child(CodeBlock.create(
-                    "PORT=3000 java -jar target/my-app-1.0.0-SNAPSHOT.jar",
+                    "PORT=3000 java -jar target/my-app-1.0.0.jar",
                     "bash"))
 
                 // AWS Lambda

@@ -74,7 +74,7 @@ function buildJavaPom(groupId, artifactId, packageName, v, tv) {
 '    <modelVersion>4.0.0</modelVersion>\n\n' +
 '    <groupId>' + groupId + '</groupId>\n' +
 '    <artifactId>' + artifactId + '</artifactId>\n' +
-'    <version>1.0.0-SNAPSHOT</version>\n\n' +
+'    <version>1.0.0</version>\n\n' +
 '    <properties>\n' +
 '        <maven.compiler.source>21</maven.compiler.source>\n' +
 '        <maven.compiler.target>21</maven.compiler.target>\n' +
@@ -108,7 +108,7 @@ function buildKotlinPom(groupId, artifactId, packageName, v, tv) {
 '    <modelVersion>4.0.0</modelVersion>\n\n' +
 '    <groupId>' + groupId + '</groupId>\n' +
 '    <artifactId>' + artifactId + '</artifactId>\n' +
-'    <version>1.0.0-SNAPSHOT</version>\n\n' +
+'    <version>1.0.0</version>\n\n' +
 '    <properties>\n' +
 '        <kotlin.version>1.9.25</kotlin.version>\n' +
 '        <teavm.version>' + tv + '</teavm.version>\n' +
@@ -525,7 +525,7 @@ function buildRunScript(artifactId) {
 'case "$PROFILE" in\n' +
 '    jvm-server)\n' +
 '        echo "=== Starting JVM server on http://localhost:$PORT ==="\n' +
-'        PORT=$PORT java -jar target/' + artifactId + '-1.0.0-SNAPSHOT.jar\n' +
+'        PORT=$PORT java -jar target/' + artifactId + '-1.0.0.jar\n' +
 '        ;;\n' +
 '    lambda)\n' +
 '        echo "=== Starting Lambda via SAM on http://localhost:3000 ==="\n' +
@@ -557,7 +557,7 @@ function buildReadme(artifactId) {
 "### JVM Standalone Server (default)\n\n" +
 "```bash\n" +
 "mvn clean package\n" +
-"java -jar target/" + artifactId + "-1.0.0-SNAPSHOT.jar\n" +
+"java -jar target/" + artifactId + "-1.0.0.jar\n" +
 "```\n\n" +
 "### TeaVM / Node.js (no Docker)\n\n" +
 "```bash\n" +

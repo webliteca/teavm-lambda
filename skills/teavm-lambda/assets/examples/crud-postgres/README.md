@@ -31,7 +31,7 @@ SQL
 
 ```bash
 mvn clean package
-java -jar target/crud-postgres-1.0-SNAPSHOT.jar
+java -jar target/crud-postgres-1.0.0.jar
 ```
 
 ## Test
