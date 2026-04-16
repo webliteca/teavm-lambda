@@ -122,15 +122,81 @@ public class QuickStartPage {
             // Building and running
             .child(Section.create().className("doc-section")
                 .child(h2("Build and Run"))
-                .child(p("Build the project with Maven using the jvm profile, then run "
-                    + "the resulting uber JAR. The standalone HTTP server starts on port 8080 "
-                    + "by default."))
+                .child(p("The generated project includes Maven profiles for multiple deployment "
+                    + "targets, plus a SAM template, Dockerfile, and a run.sh convenience "
+                    + "script. Your application code is the same for all targets."))
                 .child(CodeBlock.create(
                     """
-                    mvn clean package -P jvm
+                    ./run.sh                  # JVM standalone (default, port 8080)
+                    ./run.sh cloudrun         # TeaVM/Node.js (no Docker needed)
+                    ./run.sh lambda           # TeaVM/Node.js via SAM (needs Docker)
+                    ./run.sh jvm-server 3000  # JVM on custom port""",
+                    "bash"))
+                .child(p("Or run the build and server commands manually:"))
+
+                // JVM Standalone
+                .child(h3("JVM Standalone Server (default)"))
+                .child(p("The simplest way to run locally. Build an uber JAR with the built-in "
+                    + "HTTP server \u2014 no Docker or cloud tooling needed."))
+                .child(CodeBlock.create(
+                    """
+                    mvn clean package
                     java -jar target/my-app-1.0.0-SNAPSHOT.jar""",
                     "bash"))
-                .child(p("Test your endpoint with curl:"))
+                .child(p("The server starts on port 8080 by default. Set the PORT "
+                    + "environment variable to change it:"))
+                .child(CodeBlock.create(
+                    "PORT=3000 java -jar target/my-app-1.0.0-SNAPSHOT.jar",
+                    "bash"))
+
+                // AWS Lambda
+                .child(h3("AWS Lambda (TeaVM / Node.js)"))
+                .child(p("Build with the lambda profile to compile your Java to JavaScript via TeaVM. "
+                    + "Use AWS SAM to run locally, or use the cloudrun profile for Docker-free "
+                    + "local testing (see below)."))
+                .child(CodeBlock.create(
+                    """
+                    # Build the Lambda package (TeaVM compiles Java to JS)
+                    mvn clean package -P lambda
+
+                    # Start the local Lambda API (requires SAM CLI and Docker)
+                    sam local start-api
+
+                    # Test (SAM defaults to port 3000)
+                    curl http://localhost:3000/hello""",
+                    "bash"))
+                .child(Callout.note("SAM Prerequisites",
+                    p("sam local start-api requires the AWS SAM CLI and Docker. "
+                        + "If you don't have Docker, use the cloudrun profile below for "
+                        + "Docker-free local testing \u2014 the same TeaVM-compiled code runs on "
+                        + "both targets.")))
+
+                // Cloud Run / Node.js local
+                .child(h3("Cloud Run / Node.js (TeaVM)"))
+                .child(p("Build with the cloudrun profile and run directly with Node.js \u2014 no "
+                    + "Docker required. This is the fastest way to test your TeaVM-compiled code locally."))
+                .child(CodeBlock.create(
+                    """
+                    # Build (TeaVM compiles Java to JS)
+                    mvn clean package -P cloudrun
+
+                    # Run directly with Node.js (no Docker needed)
+                    node target/cloudrun/server.js
+
+                    # Or use Docker to mirror the production environment
+                    docker build -t my-app .
+                    docker run -p 8080:8080 my-app
+
+                    # Test
+                    curl http://localhost:8080/hello""",
+                    "bash"))
+                .child(Callout.note("Node.js Required",
+                    p("Running without Docker requires Node.js 22 installed locally. "
+                        + "The npm install step runs automatically during the Maven build.")))
+
+                // Test section
+                .child(h3("Test Your Endpoint"))
+                .child(p("Test with curl (adjust the port for SAM \u2014 it defaults to 3000):"))
                 .child(CodeBlock.create(
                     """
                     curl http://localhost:8080/hello
