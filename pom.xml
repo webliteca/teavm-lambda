@@ -81,6 +81,8 @@
         <module>teavm-lambda-demo-messagequeue</module>
         <module>teavm-lambda-demo-kotlin-todo</module>
         <module>teavm-lambda-kotlin</module>
+        <module>teavm-lambda-archetype</module>
+        <module>teavm-lambda-archetype-kotlin</module>
         <module>site</module>
     </modules>
 

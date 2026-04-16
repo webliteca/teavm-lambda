@@ -21,6 +21,59 @@ public class InstallationPage {
                 + "from scratch, including prerequisites, Maven configuration, and optional "
                 + "tooling for cloud deployments."))
 
+            // Project initializer (primary option)
+            .child(Section.create().className("doc-section")
+                .child(h2("Generate a Project"))
+                .child(p("Use the project initializer below to generate a ready-to-run "
+                    + "starter project with your preferred configuration. The generated "
+                    + "zip contains a complete Maven project with a sample REST endpoint."))
+                .child(ProjectInitializer.create()))
+
+            // Maven archetypes
+            .child(Section.create().className("doc-section")
+                .child(h2("Maven Archetypes"))
+                .child(p("Alternatively, you can create a new project from the command line using "
+                    + "a Maven archetype. Archetypes are available for both Java and Kotlin."))
+                .child(h3("Java"))
+                .child(CodeBlock.create(
+                    """
+                    mvn archetype:generate \\
+                        -DarchetypeGroupId=ca.weblite \\
+                        -DarchetypeArtifactId=teavm-lambda-archetype \\
+                        -DarchetypeVersion=0.1.0-SNAPSHOT \\
+                        -DgroupId=com.example \\
+                        -DartifactId=my-app \\
+                        -Dpackage=com.example \\
+                        -DinteractiveMode=false""",
+                    "bash"))
+                .child(h3("Kotlin"))
+                .child(CodeBlock.create(
+                    """
+                    mvn archetype:generate \\
+                        -DarchetypeGroupId=ca.weblite \\
+                        -DarchetypeArtifactId=teavm-lambda-archetype-kotlin \\
+                        -DarchetypeVersion=0.1.0-SNAPSHOT \\
+                        -DgroupId=com.example \\
+                        -DartifactId=my-app \\
+                        -Dpackage=com.example \\
+                        -DinteractiveMode=false""",
+                    "bash"))
+                .child(p("Both archetypes generate a project with three Maven profiles:"))
+                .child(El.table("archetype-profiles-table",
+                    thead(
+                        tr(th("Profile"), th("Target"), th("Command"))),
+                    tbody(
+                        tr(td("jvm-server (default)"), td("JVM standalone HTTP server"),
+                            td(code("mvn clean package"))),
+                        tr(td("lambda"), td("AWS Lambda via TeaVM/Node.js"),
+                            td(code("mvn clean package -P lambda"))),
+                        tr(td("cloudrun"), td("Google Cloud Run via TeaVM/Node.js"),
+                            td(code("mvn clean package -P cloudrun"))))))
+                .child(Callout.note("Quick run",
+                    p("The generated project includes a run.sh script. "
+                        + "Run ./run.sh to build and start the JVM server, "
+                        + "or ./run.sh cloudrun or ./run.sh lambda for other targets."))))
+
             // Prerequisites
             .child(Section.create().className("doc-section")
                 .child(h2("Prerequisites"))
@@ -112,14 +165,6 @@ public class InstallationPage {
                         tr(td("AWS SAM CLI"), td("Latest"), td("Local testing and deployment of AWS Lambda functions")),
                         tr(td("Node.js"), td("22+"), td("Running TeaVM-compiled JavaScript output locally")),
                         tr(td("Google Cloud CLI"), td("Latest"), td("Deploying to Google Cloud Run"))))))
-
-            // Project initializer
-            .child(Section.create().className("doc-section")
-                .child(h2("Generate a Project"))
-                .child(p("Use the project initializer below to generate a ready-to-run "
-                    + "starter project with your preferred configuration. The generated "
-                    + "zip contains a complete Maven project with a sample REST endpoint."))
-                .child(ProjectInitializer.create()))
 
             .build();
     }
