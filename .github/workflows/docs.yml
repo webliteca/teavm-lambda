@@ -63,7 +63,7 @@ jobs:
         run: |
           mvn javadoc:javadoc -pl teavm-lambda-core -B -Ddoclint=none
           mkdir -p site/target/webapp/javadocs
-          cp -r teavm-lambda-core/target/site/apidocs/* site/target/webapp/javadocs/
+          cp -r teavm-lambda-core/target/reports/apidocs/* site/target/webapp/javadocs/
 
       - name: Build Developer Guide
         run: |
