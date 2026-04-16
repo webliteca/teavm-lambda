@@ -54,6 +54,7 @@ COPY teavm-lambda-demo-objectstore/pom.xml teavm-lambda-demo-objectstore/
 COPY teavm-lambda-demo-messagequeue/pom.xml teavm-lambda-demo-messagequeue/
 COPY teavm-lambda-demo-kotlin-todo/pom.xml teavm-lambda-demo-kotlin-todo/
 COPY teavm-lambda-kotlin/pom.xml teavm-lambda-kotlin/
+COPY site/pom.xml site/
 COPY skills/teavm-lambda skills/teavm-lambda/
 
 RUN mvn dependency:go-offline -pl teavm-lambda-demo-cloudrun -am -q || true
