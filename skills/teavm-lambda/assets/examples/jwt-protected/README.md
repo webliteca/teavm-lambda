@@ -11,7 +11,7 @@ Demonstrates JWT authentication with @RolesAllowed and SecurityContext.
 
 ```bash
 JWT_SECRET=my-secret-key mvn clean package
-JWT_SECRET=my-secret-key java -jar target/jwt-protected-1.0-SNAPSHOT.jar
+JWT_SECRET=my-secret-key java -jar target/jwt-protected-1.0.0.jar
 ```
 
 ## Test

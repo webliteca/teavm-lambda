@@ -12,7 +12,7 @@ The smallest working teavm-lambda application. One resource class, one Main clas
 
 ```bash
 mvn clean package
-java -jar target/minimal-hello-1.0-SNAPSHOT.jar
+java -jar target/minimal-hello-1.0.0.jar
 ```
 
 ## Test

@@ -17,7 +17,7 @@ A teavm-lambda project with three deployment targets.
 
 ```bash
 mvn clean package
-java -jar target/${artifactId}-1.0.0-SNAPSHOT.jar
+java -jar target/${artifactId}-1.0.0.jar
 ```
 
 ### TeaVM / Node.js (no Docker)

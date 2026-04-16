@@ -6,7 +6,7 @@
 
 ```bash
 mvn clean package -P jvm-war
-# Deploy target/my-app-1.0-SNAPSHOT.war to your servlet container
+# Deploy target/my-app-1.0.0.war to your servlet container
 ```
 
 ## Key difference: WarServlet, not Platform.start()

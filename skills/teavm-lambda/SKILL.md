@@ -13,7 +13,7 @@ globs:
 
 Java framework for building serverless REST APIs. Compiles Java 21 to JavaScript via TeaVM and runs on Node.js 22 — or compiles to JVM bytecode. Same code deploys to AWS Lambda, Google Cloud Run, standalone JVM servers, and Servlet containers (Tomcat, TomEE, Jetty). Write Once Run Anywhere (WORA): Maven profiles control the compilation target.
 
-**Version**: 0.1.0-SNAPSHOT
+**Version**: 0.1.6
 **Zero reflection**: all routing, DI, and validation are generated at compile time by an annotation processor.
 
 ## Mental Model
@@ -73,7 +73,7 @@ public class Main {
 Build and run (JVM standalone):
 ```bash
 mvn clean package -P jvm-server
-java -jar target/my-app-1.0-SNAPSHOT.jar
+java -jar target/my-app-1.0.0.jar
 # Listening on http://localhost:8080
 ```
 

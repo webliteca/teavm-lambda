@@ -9,7 +9,7 @@ mvn clean package -P "$PROFILE" -q
 case "$PROFILE" in
     jvm-server)
         echo "=== Starting JVM server on http://localhost:$PORT ==="
-        PORT=$PORT java -jar target/${artifactId}-1.0.0-SNAPSHOT.jar
+        PORT=$PORT java -jar target/${artifactId}-1.0.0.jar
         ;;
     lambda)
         echo "=== Starting Lambda via SAM on http://localhost:3000 ==="

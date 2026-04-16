@@ -6,7 +6,7 @@
 
 ```bash
 mvn clean package -P jvm-server
-java -jar target/my-app-1.0-SNAPSHOT.jar
+java -jar target/my-app-1.0.0.jar
 ```
 
 Uses `teavm-lambda-adapter-httpserver` — the JDK built-in `HttpServer` with zero external dependencies.
