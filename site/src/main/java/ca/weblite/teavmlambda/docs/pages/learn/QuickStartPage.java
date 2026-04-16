@@ -130,6 +130,10 @@ public class QuickStartPage {
                     mvn clean package -P jvm
                     java -jar target/my-app-1.0.0-SNAPSHOT.jar""",
                     "bash"))
+                .child(p("To use a different port, set the PORT environment variable:"))
+                .child(CodeBlock.create(
+                    "PORT=3000 java -jar target/my-app-1.0.0-SNAPSHOT.jar",
+                    "bash"))
                 .child(p("Test your endpoint with curl:"))
                 .child(CodeBlock.create(
                     """
