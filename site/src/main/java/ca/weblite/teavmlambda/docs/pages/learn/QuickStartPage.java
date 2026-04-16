@@ -123,8 +123,16 @@ public class QuickStartPage {
             .child(Section.create().className("doc-section")
                 .child(h2("Build and Run"))
                 .child(p("The generated project includes Maven profiles for multiple deployment "
-                    + "targets, plus a SAM template and Dockerfile. Your application code is "
-                    + "the same for all targets \u2014 only the build command changes."))
+                    + "targets, plus a SAM template, Dockerfile, and a run.sh convenience "
+                    + "script. Your application code is the same for all targets."))
+                .child(CodeBlock.create(
+                    """
+                    ./run.sh                  # JVM standalone (default, port 8080)
+                    ./run.sh cloudrun         # TeaVM/Node.js (no Docker needed)
+                    ./run.sh lambda           # TeaVM/Node.js via SAM (needs Docker)
+                    ./run.sh jvm-server 3000  # JVM on custom port""",
+                    "bash"))
+                .child(p("Or run the build and server commands manually:"))
 
                 // JVM Standalone
                 .child(h3("JVM Standalone Server (default)"))
