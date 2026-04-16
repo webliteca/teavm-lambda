@@ -144,7 +144,8 @@ public class QuickStartPage {
                 // AWS Lambda
                 .child(h3("AWS Lambda (TeaVM / Node.js)"))
                 .child(p("Build with the lambda profile to compile your Java to JavaScript via TeaVM. "
-                    + "The generated project includes a template.yaml for AWS SAM."))
+                    + "Use AWS SAM to run locally, or use the cloudrun profile for Docker-free "
+                    + "local testing (see below)."))
                 .child(CodeBlock.create(
                     """
                     # Build the Lambda package (TeaVM compiles Java to JS)
@@ -156,26 +157,34 @@ public class QuickStartPage {
                     # Test (SAM defaults to port 3000)
                     curl http://localhost:3000/hello""",
                     "bash"))
-                .child(Callout.note("Prerequisites",
-                    p("Local Lambda testing requires the AWS SAM CLI and Docker. "
-                        + "Install SAM from https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html")))
+                .child(Callout.note("SAM Prerequisites",
+                    p("sam local start-api requires the AWS SAM CLI and Docker. "
+                        + "If you don't have Docker, use the cloudrun profile below for "
+                        + "Docker-free local testing \u2014 the same TeaVM-compiled code runs on "
+                        + "both targets.")))
 
-                // Cloud Run
-                .child(h3("Cloud Run (TeaVM / Node.js)"))
-                .child(p("Build with the cloudrun profile and use the included Dockerfile to "
-                    + "run locally. This mirrors the exact Cloud Run environment."))
+                // Cloud Run / Node.js local
+                .child(h3("Cloud Run / Node.js (TeaVM)"))
+                .child(p("Build with the cloudrun profile and run directly with Node.js \u2014 no "
+                    + "Docker required. This is the fastest way to test your TeaVM-compiled code locally."))
                 .child(CodeBlock.create(
                     """
-                    # Build and run with Docker (Dockerfile uses -P cloudrun)
+                    # Build (TeaVM compiles Java to JS)
+                    mvn clean package -P cloudrun
+
+                    # Run directly with Node.js (no Docker needed)
+                    node target/cloudrun/server.js
+
+                    # Or use Docker to mirror the production environment
                     docker build -t my-app .
                     docker run -p 8080:8080 my-app
-
-                    # Or build just the Cloud Run package
-                    mvn clean package -P cloudrun
 
                     # Test
                     curl http://localhost:8080/hello""",
                     "bash"))
+                .child(Callout.note("Node.js Required",
+                    p("Running without Docker requires Node.js 22 installed locally. "
+                        + "The npm install step runs automatically during the Maven build.")))
 
                 // Test section
                 .child(h3("Test Your Endpoint"))

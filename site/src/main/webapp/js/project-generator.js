@@ -45,6 +45,9 @@ window.generateTeavmLambdaProject = function(groupId, artifactId, packageName, l
     // ========== Dockerfile ==========
     zip.file(root + 'Dockerfile', buildDockerfile(artifactId));
 
+    // ========== run.sh ==========
+    zip.file(root + 'run.sh', buildRunScript(artifactId), {unixPermissions: '755'});
+
     // ========== README ==========
     zip.file(root + 'README.md', buildReadme(artifactId));
 
@@ -507,27 +510,64 @@ function buildDockerfile(artifactId) {
 'CMD ["node", "server.js"]\n';
 }
 
+function buildRunScript(artifactId) {
+    return '#!/bin/bash\n' +
+'set -e\n' +
+'PROFILE="${1:-jvm-server}"\n' +
+'PORT="${2:-8080}"\n\n' +
+'echo "=== Building with profile: $PROFILE ==="\n' +
+'mvn clean package -P "$PROFILE" -q\n\n' +
+'case "$PROFILE" in\n' +
+'    jvm-server)\n' +
+'        echo "=== Starting JVM server on http://localhost:$PORT ==="\n' +
+'        PORT=$PORT java -jar target/' + artifactId + '-1.0.0-SNAPSHOT.jar\n' +
+'        ;;\n' +
+'    lambda)\n' +
+'        echo "=== Starting Lambda via SAM on http://localhost:3000 ==="\n' +
+'        sam local start-api\n' +
+'        ;;\n' +
+'    cloudrun)\n' +
+'        echo "=== Starting Node.js server on http://localhost:$PORT ==="\n' +
+'        PORT=$PORT node target/cloudrun/server.js\n' +
+'        ;;\n' +
+'    *)\n' +
+'        echo "Unknown profile: $PROFILE"\n' +
+'        echo "Usage: ./run.sh [jvm-server|lambda|cloudrun] [port]"\n' +
+'        exit 1\n' +
+'        ;;\n' +
+'esac\n';
+}
+
 function buildReadme(artifactId) {
     return "# " + artifactId + "\n\n" +
 "A teavm-lambda project with three deployment targets.\n\n" +
-"## Build and Run\n\n" +
+"## Quick Start\n\n" +
+"```bash\n" +
+"./run.sh                  # JVM standalone (default, port 8080)\n" +
+"./run.sh cloudrun         # TeaVM/Node.js (no Docker needed)\n" +
+"./run.sh lambda           # TeaVM/Node.js via SAM (needs Docker)\n" +
+"./run.sh jvm-server 3000  # JVM on custom port\n" +
+"```\n\n" +
+"## Build and Run (Manual)\n\n" +
 "### JVM Standalone Server (default)\n\n" +
 "```bash\n" +
 "mvn clean package\n" +
 "java -jar target/" + artifactId + "-1.0.0-SNAPSHOT.jar\n" +
-"# Server starts on http://localhost:8080\n" +
 "```\n\n" +
-"### AWS Lambda (TeaVM / Node.js)\n\n" +
+"### TeaVM / Node.js (no Docker)\n\n" +
+"```bash\n" +
+"mvn clean package -P cloudrun\n" +
+"node target/cloudrun/server.js\n" +
+"```\n\n" +
+"### AWS Lambda (SAM)\n\n" +
 "```bash\n" +
 "mvn clean package -P lambda\n" +
 "sam local start-api\n" +
-"# API starts on http://localhost:3000\n" +
 "```\n\n" +
-"### Google Cloud Run (TeaVM / Node.js)\n\n" +
+"### Docker (Cloud Run)\n\n" +
 "```bash\n" +
 "docker build -t " + artifactId + " .\n" +
 "docker run -p 8080:8080 " + artifactId + "\n" +
-"# Server starts on http://localhost:8080\n" +
 "```\n\n" +
 "## Test\n\n" +
 "```bash\n" +
